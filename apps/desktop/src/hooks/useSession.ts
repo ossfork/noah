@@ -67,13 +67,29 @@ export function useSession(): UseSessionReturn {
   }, [setSession, setSessionMode, prependSession, addMessage, clearMessages]);
 
   const startNewProblem = useCallback(async (mode?: SessionMode) => {
-    if (sessionId) {
+    // 1. If the LLM is streaming back into this session, cancel it. Without
+    //    this, end_session awaits a busy orchestrator and "New chat" feels
+    //    unresponsive — the click is received, but nothing visible happens
+    //    until the response finishes (sometimes seconds later).
+    const store = useSessionStore.getState();
+    if (store.processingSessionId) {
       try {
-        await commands.endSession(sessionId);
-        endSessionState();
-      } catch (err) {
-        console.error("Failed to end session:", err);
+        await commands.cancelProcessing();
+      } catch {
+        /* best-effort — fall through to teardown either way */
       }
+      store.setProcessingSession(null);
+    }
+
+    // 2. Drop the local "active" state synchronously so the welcome screen
+    //    paints immediately. Fire-and-forget the backend end_session so the
+    //    UI doesn't block on its IPC round-trip; an orphaned-active row in
+    //    the journal is harmless and the next end_session reconciles it.
+    if (sessionId) {
+      endSessionState();
+      commands.endSession(sessionId).catch((err) => {
+        console.error("Failed to end session:", err);
+      });
     }
     await createSession(mode ?? "default");
   }, [sessionId, endSessionState, createSession]);

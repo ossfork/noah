@@ -279,7 +279,16 @@ pub fn is_context_limit_error(status: reqwest::StatusCode, body: &str) -> bool {
 
 impl LlmClient {
     pub fn new(api_key: String) -> Self {
+        // User-Agent identifies this client to noah-consumer's LLM proxy
+        // for abuse-control purposes (per-version blocklist via the
+        // MIN_APP_VERSION env). Format: noah-desktop/<semver> on <os>.
+        let ua = format!(
+            "noah-desktop/{} ({})",
+            env!("CARGO_PKG_VERSION"),
+            std::env::consts::OS
+        );
         let client = reqwest::Client::builder()
+            .user_agent(ua)
             .timeout(std::time::Duration::from_secs(request_timeout_secs()))
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());
@@ -290,7 +299,16 @@ impl LlmClient {
     }
 
     pub fn with_auth(auth: AuthMode) -> Self {
+        // User-Agent identifies this client to noah-consumer's LLM proxy
+        // for abuse-control purposes (per-version blocklist via the
+        // MIN_APP_VERSION env). Format: noah-desktop/<semver> on <os>.
+        let ua = format!(
+            "noah-desktop/{} ({})",
+            env!("CARGO_PKG_VERSION"),
+            std::env::consts::OS
+        );
         let client = reqwest::Client::builder()
+            .user_agent(ua)
             .timeout(std::time::Duration::from_secs(request_timeout_secs()))
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());

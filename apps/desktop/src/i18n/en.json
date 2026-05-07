@@ -1,6 +1,6 @@
 {
   "chat": {
-    "placeholder": "Tell Noah what you need help with...",
+    "placeholder": "What's broken? Tell Noah and hit go.",
     "learnPlaceholder": "Paste a link to a guide, or type what you'd like me to know...",
     "situation": "Situation",
     "plan": "Plan",
@@ -90,7 +90,7 @@
     "emailPlaceholder": "you@example.com",
     "sendLink": "Email me a sign-in link",
     "sending": "Sending...",
-    "trialHint": "No passwords. Free for 7 days — no card needed.",
+    "trialHint": "No passwords. Free trial — no card needed.",
     "checkInbox": "We sent a sign-in link to {email}. Click the link to finish signing in — Noah will pick it up automatically.",
     "checkSpam": "Can't find it? Check your spam folder.",
     "useDifferentEmail": "Use a different email",
@@ -101,13 +101,16 @@
     "errorVerifyFailed": "Couldn't verify the link"
   },
   "subscribe": {
-    "firstFixHeadline": "Keep Noah, after the trial.",
-    "firstFixBody": "Noah is fixing this in the background. Lock in a plan now — $0 today, your card is only charged when your 7-day trial ends. Cancel any time.",
-    "paywallHeadline": "Your trial ended",
-    "paywallBody": "Pick up where you left off — $4.99/month or $50/year, cancel any time.",
-    "capHitHeadline": "You've hit this month's fair-use limit",
-    "capHitBody": "Your 100 fixes reset next period. Or upgrade your plan if you need more.",
+    "firstFixHeadline": "Keep Noah on your Mac",
+    "firstFixBody": "Pick a plan and Noah keeps fixing problems for you. No charge today.",
+    "secondIssueHeadline": "Keep Noah on your Mac",
+    "secondIssueBody": "Pick a plan and Noah keeps fixing problems for you. No charge until {date}.",
+    "paywallHeadline": "Welcome back",
+    "paywallBody": "Pick up where you left off. $4.99/mo or $50/yr — cancel any time.",
+    "capHitHeadline": "You've hit your trial quota",
+    "capHitBody": "Keep Noah going — $4.99/mo or $50/yr, cancel any time.",
     "trustBadge": "$0 today · cancel any time · no auto-charge during trial",
+    "footnote": "$0 today · cancel any time · we'll never charge during your trial.",
     "plan": {
       "annual": {
         "label": "Annual",
@@ -123,10 +126,27 @@
         "desc": "Cancel any time"
       }
     },
-    "keepTrial": "Keep my free trial",
-    "subscribe": "Start subscription",
+    "keepTrial": "Not yet — keep my free trial",
+    "subscribe": "Keep Noah",
     "opening": "Opening checkout…",
-    "fixContinuesNote": "Either way, Noah keeps fixing this in the background."
+    "fixContinuesNote": "Either way, Noah keeps fixing this in the background.",
+    "extend": {
+      "prompt": "Need more time?",
+      "subprompt": "Drop your email — we'll send a bonus code that adds another day.",
+      "emailPlaceholder": "you@example.com",
+      "submit": "Add another day",
+      "submitting": "Adding...",
+      "success": "Another day added. Your bonus code is on the way.",
+      "codeLabel": "Your code",
+      "errorAlreadyExtended": "Already extended this trial.",
+      "errorEmailTaken": "That email's already used another extension.",
+      "errorGeneric": "Something went wrong — try again."
+    }
+  },
+  "trialBanner": {
+    "lead": "Noah is yours to use",
+    "activeUntil": "free through {date}",
+    "subscribeCta": "Subscribe to keep it"
   },
   "billing": {
     "sectionTitle": "Billing",
@@ -257,6 +277,8 @@
     "langEsDesc": "Siempre usar español.",
     "langZhDesc": "始终使用中文。",
     "helpFeedback": "Help & Feedback",
+    "contactSupport": "Email support",
+    "helpAndFaq": "Help & FAQ",
     "reportProblem": "Report a Problem",
     "gatheringInfo": "Gathering info...",
     "anthropicConsole": "Anthropic Console",

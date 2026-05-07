@@ -390,19 +390,25 @@ pub fn run() {
                 }).await.ok();
             });
 
-            // Spawn the proactive health monitor in the background.
-            let monitor = proactive::ProactiveMonitor::new(
-                llm_for_monitor, db_arc, app.handle().clone(),
+            // Proactive health monitor + auto-heal + background scanners:
+            // all disabled in v1 consumer build to keep the surface clean.
+            // The Settings toggles for these were removed too. Re-enable
+            // by wrapping the scanner spawn in a feature flag when we surface
+            // these in the UI again.
+            let _ = (
+                llm_for_monitor,
+                db_arc,
+                llm_for_autoheal,
+                autoheal_db,
+                autoheal_app_dir,
+                scanner_mgr,
+                health_db,
+                health_app_dir,
+                health_registry,
+                health_registry2,
             );
-            tauri::async_runtime::spawn(async move { monitor.run_forever().await });
 
-            // Spawn the auto-heal monitor in the background.
-            let autoheal_monitor = autoheal::AutoHealMonitor::new(
-                llm_for_autoheal, autoheal_db, app.handle().clone(), autoheal_app_dir,
-            );
-            tauri::async_runtime::spawn(async move { autoheal_monitor.run_forever().await });
-
-            // Spawn the scanner manager: initial light scan after 5 min, then periodic.
+            #[cfg(any())] // disabled — see comment above
             tauri::async_runtime::spawn(async move {
                 // Initial delay — let app finish starting.
                 tokio::time::sleep(std::time::Duration::from_secs(300)).await;
@@ -708,6 +714,7 @@ pub fn run() {
             commands::consumer::consumer_billing_checkout_url,
             commands::consumer::consumer_billing_portal_url,
             commands::consumer::consumer_confirm_checkout,
+            commands::consumer::consumer_trial_extend,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

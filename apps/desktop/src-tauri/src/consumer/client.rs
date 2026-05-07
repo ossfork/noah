@@ -24,6 +24,12 @@ pub struct Entitlement {
     pub status: String,
     pub trial_started_at: Option<i64>,
     pub trial_ends_at: Option<i64>,
+    #[serde(default)]
+    pub trial_extended_at: Option<i64>,
+    #[serde(default)]
+    pub tz_offset_minutes: Option<i32>,
+    #[serde(default)]
+    pub bonus_code: Option<String>,
     pub period_start: Option<i64>,
     pub period_end: Option<i64>,
     pub usage_used: i64,
@@ -97,13 +103,53 @@ pub async fn fetch_entitlement(auth: &Auth<'_>) -> Result<Entitlement> {
     Ok(resp.json().await?)
 }
 
-pub async fn notify_issue_started(auth: &Auth<'_>) -> Result<Entitlement> {
-    let req = client().post(format!("{}/events/issue-started", base_url()));
+pub async fn notify_issue_started(
+    auth: &Auth<'_>,
+    tz_offset_minutes: Option<i32>,
+) -> Result<Entitlement> {
+    let req = client()
+        .post(format!("{}/events/issue-started", base_url()))
+        .json(&serde_json::json!({ "tz_offset_minutes": tz_offset_minutes }));
     let resp = apply_auth(req, auth).send().await?;
     if !resp.status().is_success() {
         return Err(anyhow!("issue-started failed: {}", resp.status()));
     }
     Ok(resp.json().await?)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrialExtendResponse {
+    pub ok: bool,
+    #[serde(default)]
+    pub entitlement: Option<Entitlement>,
+    #[serde(default)]
+    pub error: Option<String>,
+}
+
+/// Trade an email for one more calendar day of trial. Server enforces
+/// idempotency (one extension per device, one per email-hash). On
+/// 409 / already-extended, returns ok=false; on success, returns the
+/// fresh entitlement with the new trial_ends_at.
+pub async fn trial_extend(auth: &Auth<'_>, email: &str) -> Result<TrialExtendResponse> {
+    let req = client()
+        .post(format!("{}/trial/extend", base_url()))
+        .json(&serde_json::json!({ "email": email }));
+    let resp = apply_auth(req, auth).send().await?;
+    let status = resp.status();
+    let body: serde_json::Value = resp.json().await.unwrap_or(serde_json::json!({}));
+    if status.is_success() {
+        return Ok(serde_json::from_value(body)?);
+    }
+    let err_code = body
+        .get("error")
+        .and_then(|v| v.as_str())
+        .unwrap_or("extend_failed")
+        .to_string();
+    Ok(TrialExtendResponse {
+        ok: false,
+        entitlement: None,
+        error: Some(err_code),
+    })
 }
 
 pub async fn notify_fix_completed(auth: &Auth<'_>) -> Result<FixCompletedResponse> {

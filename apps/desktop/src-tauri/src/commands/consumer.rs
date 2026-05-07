@@ -131,16 +131,39 @@ pub async fn consumer_get_entitlement(
 #[tauri::command]
 pub async fn consumer_notify_issue_started(
     state: State<'_, AppState>,
+    tz_offset_minutes: Option<i32>,
 ) -> Result<Option<client::Entitlement>, String> {
     let (session_tok, device_id) = current_auth(&state.app_dir);
     let Some(auth) = auth_ref(&session_tok, &device_id) else {
         return Ok(None);
     };
-    let ent = client::notify_issue_started(&auth)
+    let ent = client::notify_issue_started(&auth, tz_offset_minutes)
         .await
         .map_err(|e| e.to_string())?;
     let _ = entitlement::save_cached(&state.app_dir, &ent);
     Ok(Some(ent))
+}
+
+#[tauri::command]
+pub async fn consumer_trial_extend(
+    state: State<'_, AppState>,
+    email: String,
+) -> Result<client::TrialExtendResponse, String> {
+    let trimmed = email.trim();
+    if trimmed.is_empty() {
+        return Err("email required".to_string());
+    }
+    let (session_tok, device_id) = current_auth(&state.app_dir);
+    let Some(auth) = auth_ref(&session_tok, &device_id) else {
+        return Err("no auth available".to_string());
+    };
+    let result = client::trial_extend(&auth, trimmed)
+        .await
+        .map_err(|e| e.to_string())?;
+    if let Some(ent) = &result.entitlement {
+        let _ = entitlement::save_cached(&state.app_dir, ent);
+    }
+    Ok(result)
 }
 
 #[tauri::command]

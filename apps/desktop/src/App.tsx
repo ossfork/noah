@@ -18,6 +18,7 @@ import { SessionSummary } from "./components/SessionSummary";
 import { useSessionStore } from "./stores/sessionStore";
 import { TilePickerScreen } from "./components/TilePickerScreen";
 import { SubscribeModal } from "./components/SubscribeModal";
+import { TrialBanner } from "./components/TrialBanner";
 import { useDebugStore, type DebugEvent } from "./stores/debugStore";
 import { useConsumerStore } from "./stores/consumerStore";
 import { useTheme } from "./hooks/useTheme";
@@ -187,6 +188,7 @@ function MainApp() {
       {/* Title bar — spans full width, sits in macOS overlay region */}
       <MainTitleBar />
       <UpdateBanner />
+      <TrialBanner />
       <ProactiveSuggestionBanner />
 
       {/* Body: sidebar + main content */}

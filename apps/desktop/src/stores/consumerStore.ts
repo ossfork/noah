@@ -2,7 +2,11 @@ import { create } from "zustand";
 import * as commands from "../lib/tauri-commands";
 import type { Entitlement } from "../lib/tauri-commands";
 
-export type SubscribeModalVariant = "first_fix" | "paywall" | "cap_hit";
+export type SubscribeModalVariant =
+  | "first_fix"
+  | "second_issue"
+  | "paywall"
+  | "cap_hit";
 
 interface ConsumerState {
   entitlement: Entitlement | null;

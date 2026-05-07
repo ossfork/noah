@@ -11,7 +11,8 @@
 #   • Archives journal.db as journal.db.bak-<timestamp>
 #   • Removes device_id.txt so you get a brand-new anonymous device
 #   • Clears WKWebView localStorage under ~/Library/WebKit/<bundle> so
-#     flags like noah.firstFixPromptShown don't carry over between runs
+#     flags like noah.firstIssueSessionId / noah.secondIssueModalShown
+#     don't carry over between runs
 #   Simulates a truly first-ever install. Restore journal with:
 #       mv journal.db.bak-<ts> journal.db
 #
@@ -22,7 +23,8 @@ set -euo pipefail
 
 APPDIR="$HOME/Library/Application Support/app.onnoah.desktop"
 # Tauri 2 WKWebView stores localStorage here, not in APPDIR. --fresh needs
-# to nuke this to reset flags like noah.firstFixPromptShown and noah.pendingSeed.
+# to nuke this to reset trial flags (noah.firstIssueSessionId,
+# noah.secondIssueModalShown) and noah.pendingSeed.
 WEBDIR="$HOME/Library/WebKit/app.onnoah.desktop"
 
 FRESH=0

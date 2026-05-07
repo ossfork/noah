@@ -8,21 +8,41 @@ import type {
   UserEventType,
 } from "../lib/tauri-commands";
 
-/** localStorage key marking that we've already shown the first-fix
- *  subscribe prompt for this install. Reset by dev-reset-auth --fresh. */
-const FIRST_FIX_PROMPT_KEY = "noah.firstFixPromptShown";
+/**
+ * Trial-modal trigger model:
+ *
+ * The user's *first* issue runs uninterrupted — we don't pop a modal
+ * during their first taste of the product. The trigger is "next issue":
+ * the first time they send a message in a session-id different from the
+ * one we recorded as the first issue. Time-based triggers (trial date
+ * passed, hidden cap-hit) are handled separately and not gated by this
+ * flag.
+ *
+ * Reset by dev-reset-auth --fresh.
+ */
+const FIRST_ISSUE_SESSION_KEY = "noah.firstIssueSessionId";
+const SECOND_ISSUE_MODAL_SHOWN_KEY = "noah.secondIssueModalShown";
 
-function maybeShowFirstFixPrompt(): void {
+/** Returns true if this is the first message for what we should treat
+ *  as a second-or-later issue (different sessionId from the first). */
+function maybeOpenSecondIssueModal(currentSessionId: string): void {
   const consumer = useConsumerStore.getState();
   const ent = consumer.entitlement;
   if (!ent || ent.status !== "trialing") return;
   try {
-    if (localStorage.getItem(FIRST_FIX_PROMPT_KEY) === "1") return;
-    localStorage.setItem(FIRST_FIX_PROMPT_KEY, "1");
+    if (localStorage.getItem(SECOND_ISSUE_MODAL_SHOWN_KEY) === "1") return;
+    const firstSession = localStorage.getItem(FIRST_ISSUE_SESSION_KEY);
+    if (!firstSession) {
+      // First-ever message — record this session, do NOT show modal.
+      localStorage.setItem(FIRST_ISSUE_SESSION_KEY, currentSessionId);
+      return;
+    }
+    if (firstSession === currentSessionId) return; // still on issue #1
+    localStorage.setItem(SECOND_ISSUE_MODAL_SHOWN_KEY, "1");
+    consumer.openSubscribeModal("second_issue");
   } catch {
-    // localStorage disabled — fall through; modal shows once per session.
+    // localStorage disabled — modal flags reset every app process; acceptable.
   }
-  consumer.openSubscribeModal("first_fix");
 }
 
 interface UseAgentReturn {
@@ -100,6 +120,18 @@ export function useAgent(): UseAgentReturn {
         consumer.openSubscribeModal(variant);
         return;
       }
+      // Hidden trial-quota cap (≥ usage_limit while still trialing).
+      // Server-side denyReason returns "trial_quota"; mirror that here so
+      // the modal pops with the cap-hit variant ("you've hit your trial
+      // quota") without ever telling the user the specific number.
+      if (
+        ent &&
+        ent.status === "trialing" &&
+        ent.usage_used >= ent.usage_limit
+      ) {
+        consumer.openSubscribeModal("cap_hit");
+        return;
+      }
       if (!ent || ent.status === "none") {
         try {
           const started = await commands.consumerNotifyIssueStarted();
@@ -108,6 +140,10 @@ export function useAgent(): UseAgentReturn {
           // non-fatal — trial start is best-effort; server is authoritative
         }
       }
+      // After ensuring trial is started, evaluate second-issue trigger
+      // *now* so that the first-issue session-id is recorded against
+      // the very first message, not later.
+      maybeOpenSecondIssueModal(sessionId);
 
       const prevChangeIds = new Set(changes.map((c) => c.id));
 
@@ -151,15 +187,7 @@ export function useAgent(): UseAgentReturn {
       actionType?: AssistantActionType,
     ) => {
       if (!sessionId) return;
-
-      // Commitment-moment subscribe prompt: when the user clicks the
-      // action button on a RUN_STEP card during the trial, that's
-      // their "please fix it" — show the first-fix modal right then,
-      // once per install. The fix continues in the background; the
-      // user can dismiss and let it run, or subscribe.
-      if (actionType === "RUN_STEP") {
-        maybeShowFirstFixPrompt();
-      }
+      void actionType; // first-fix modal trigger removed — first issue runs uninterrupted
 
       const prevChangeIds = new Set(changes.map((c) => c.id));
 

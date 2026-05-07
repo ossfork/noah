@@ -1,61 +1,116 @@
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
-/* ── Noah — Calm Professional Theme ──
+/* ── Noah — Aurora Design System ──
  *
- * Design intent: Noah is IT support for non-technical people.
- * They're often stressed when they open this app. The palette
- * should feel like a calm, competent professional's office —
- * soft dark base (cool gray, not navy), teal accent (the brand),
- * clean readable text, and enough contrast to feel trustworthy.
+ * See docs/DESIGN_PRINCIPLES.md for the full rationale. In short:
  *
- * Palette D: "Soft Dark" — desaturated cool gray with a whisper
- * of blue. Professional enough to sit alongside Slack, Teams, and
- * Chrome without looking tinted. The teal accent carries the brand.
+ *   • One color family. The aurora gradient (sky-blue → indigo →
+ *     violet) is Noah's identity. Every interactive accent lives
+ *     within that arc.
+ *   • Two registers — Launch (aurora gradient: aim Noah at a problem)
+ *     and Commit (aurora-teal: subscribe, success). Distinct but
+ *     visually related, both cool.
+ *   • Saturation is reserved. The most-saturated thing on screen
+ *     is the one thing the user is supposed to do next.
+ *   • Soft elevation, not hard borders. Cards float; they aren't
+ *     framed. Identity lives in hover/focus, not in static chrome.
  */
 @theme {
-  /* Soft dark backgrounds — cool gray, desaturated */
-  --color-bg-primary: #14171c;
-  --color-bg-secondary: #1a1d24;
-  --color-bg-tertiary: #24272e;
-  --color-bg-input: #1c1f26;
-  --color-bg-user-bubble: #1f5c4f;
-  --color-text-user-bubble: #d1fae5;
+  /* Soft dark backgrounds — slightly warmer and brighter than the
+     original cool-crushed palette. Closer to Apple's macOS dark mode
+     than to GitHub's "dark dimmed". Easier on stressed eyes that
+     might be reading at low display brightness. */
+  --color-bg-primary: #1a1d23;
+  --color-bg-secondary: #21252c;
+  --color-bg-tertiary: #2a2e36;
+  --color-bg-input: #232730;
+  /* User bubble — neutral cool slate with the faintest warmth.
+     Previously a saturated dark teal that competed with primary
+     CTAs for attention. Now muted enough that the eye reads it as
+     "me speaking" without confusing it with an action. */
+  --color-bg-user-bubble: #34394a;
+  --color-text-user-bubble: #ebedf2;
   --color-bg-assistant-bubble: #1a1d24;
   --color-bg-system-bubble: #16191f;
   --color-bg-overlay: rgba(10, 12, 16, 0.6);
 
-  /* Clean, high-contrast text */
-  --color-text-primary: #e5e7eb;
-  --color-text-secondary: #9ca3af;
-  --color-text-muted: #6b7280;
+  /* Clean, high-contrast text — secondary bumped from #9ca3af to
+     #b4bcc8 so muted descriptions don't fade into the background
+     for users with dim displays. */
+  --color-text-primary: #ebedf2;
+  --color-text-secondary: #b4bcc8;
+  --color-text-muted: #7a8290;
   --color-text-inverse: #ffffff;
 
-  /* Subtle neutral borders */
-  --color-border-primary: #2a2d35;
-  --color-border-focus: #2dd4bf;
+  /* Subtle neutral borders — slightly more visible against the
+     warmer bg-primary so card edges stay defined. */
+  --color-border-primary: #353944;
+  --color-border-focus: #5b9bd5;
 
-  /* Teal-forward accents — brand color leads */
-  --color-accent-blue: #2dd4bf;
-  --color-accent-green: #34d399;
+  /* Aurora system — single hue family.
+     • aurora-blue is the leftmost end of the gradient; used standalone
+       for everyday chat actions (Submit a question, focus rings).
+     • aurora-indigo / aurora-violet are the gradient's middle/right;
+       used together (--aurora) for launch moments only.
+     • aurora-teal (--color-accent-green) is the COMMIT register —
+       cool seafoam, NOT grass green. Sits next to aurora-blue in
+       hue space, so subscribe/result feels related, not foreign.
+     • aurora-purple is for Plan-label content (semantic hue, not action).  */
+  --color-accent-blue: #5b9bd5;
+  --color-accent-blue-soft: rgba(91, 155, 213, 0.12);
+  --color-accent-indigo: #6366f1;
+  --color-accent-violet: #8b5cf6;
+  /* Aurora-teal — replaces the old grass-green (#34d399). Same
+     semantic role (commit / success), unified hue family. */
+  --color-accent-green: #14b8a6;
+  --color-accent-green-soft: rgba(20, 184, 166, 0.12);
   --color-accent-red: #f87171;
   --color-accent-amber: #fbbf24;
   --color-accent-yellow: #fde68a;
   --color-accent-purple: #a78bfa;
 
+  /* Aurora launch identity — used by buttons, focus glows, thinking
+     dots, and any "aim Noah at a problem" surface. Reference these
+     vars in inline styles or via Tailwind arbitrary-values. */
+  --aurora: linear-gradient(135deg, #5b9bd5 0%, #6366f1 50%, #8b5cf6 100%);
+  --aurora-soft: linear-gradient(135deg, rgba(91, 155, 213, 0.12), rgba(139, 92, 246, 0.12));
+  --aurora-glow: 0 8px 32px -12px rgba(99, 102, 241, 0.5);
+  --aurora-glow-hover: 0 12px 40px -10px rgba(99, 102, 241, 0.65);
+  --aurora-shadow-button:
+    0 1px 0 rgba(255, 255, 255, 0.18) inset,
+    0 6px 16px -4px rgba(99, 102, 241, 0.55),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+  --aurora-shadow-button-hover:
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 10px 24px -4px rgba(99, 102, 241, 0.7),
+    0 2px 4px rgba(0, 0, 0, 0.18);
+
+  /* Commit moments share the launch identity — same aurora gradient,
+     same glow family. The .btn-commit class layers premium depth
+     treatment on top (specular highlight, multi-shadow stack) so
+     bigger moments feel bigger without introducing a foreign hue. */
+  --commit-gradient: var(--aurora);
+  --commit-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.18) inset,
+    0 6px 16px -4px rgba(99, 102, 241, 0.55),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+
   /* Status */
-  --color-status-active: #34d399;
+  --color-status-active: #14b8a6;
   --color-status-idle: #6b7280;
   --color-status-pending: #fbbf24;
-  --color-status-running: #2dd4bf;
+  --color-status-running: #5b9bd5;
   --color-status-error: #f87171;
   --color-status-denied: #6b7280;
 
-  /* Seamless chat surfaces */
-  --color-surface-card: rgba(45, 212, 191, 0.03);
+  /* Seamless chat surfaces — neutral, soft elevation */
+  --color-surface-card: rgba(255, 255, 255, 0.02);
   --color-surface-card-border: rgba(255, 255, 255, 0.06);
-  --color-accent-border: rgba(45, 212, 191, 0.12);
+  --color-accent-border: rgba(91, 155, 213, 0.14);
   --color-surface-pill: rgba(36, 39, 46, 0.7);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 24px -12px rgba(0, 0, 0, 0.45);
+  --shadow-card-hover: 0 1px 2px rgba(0, 0, 0, 0.25), 0 12px 32px -12px rgba(99, 102, 241, 0.25);
 }
 
 /* ── Light Mode ──
@@ -71,8 +126,8 @@
     --color-bg-secondary: #ffffff;
     --color-bg-tertiary: #e8ecf4;
     --color-bg-input: #ffffff;
-    --color-bg-user-bubble: #d5eeeb;
-    --color-text-user-bubble: #1a3a35;
+    --color-bg-user-bubble: #e7ecf2;
+    --color-text-user-bubble: #1a2333;
     --color-bg-assistant-bubble: #ffffff;
     --color-bg-system-bubble: #e8ecf4;
     --color-bg-overlay: rgba(15, 23, 41, 0.3);
@@ -83,27 +138,54 @@
     --color-text-inverse: #ffffff;
 
     --color-border-primary: #d4dae8;
-    --color-border-focus: #0d9488;
+    --color-border-focus: #2563eb;
 
-    --color-accent-blue: #0d9488;
-    --color-accent-green: #059669;
+    --color-accent-blue: #2563eb;
+    --color-accent-blue-soft: rgba(37, 99, 235, 0.08);
+    --color-accent-indigo: #4f46e5;
+    --color-accent-violet: #7c3aed;
+    /* Aurora-teal in light mode — slightly deeper for contrast on white */
+    --color-accent-green: #0d9488;
+    --color-accent-green-soft: rgba(13, 148, 136, 0.1);
     --color-accent-red: #dc2626;
     --color-accent-amber: #d97706;
     --color-accent-yellow: #f59e0b;
     --color-accent-purple: #7c3aed;
 
-    --color-status-active: #059669;
+    /* Aurora launch — light mode tuned for white-card contrast */
+    --aurora: linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #7c3aed 100%);
+    --aurora-soft: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(124, 58, 237, 0.1));
+    --aurora-glow: 0 8px 28px -10px rgba(79, 70, 229, 0.4);
+    --aurora-glow-hover: 0 12px 36px -8px rgba(79, 70, 229, 0.55);
+    --aurora-shadow-button:
+      0 1px 0 rgba(255, 255, 255, 0.4) inset,
+      0 6px 16px -4px rgba(79, 70, 229, 0.4),
+      0 1px 2px rgba(15, 23, 41, 0.08);
+    --aurora-shadow-button-hover:
+      0 1px 0 rgba(255, 255, 255, 0.5) inset,
+      0 10px 24px -4px rgba(79, 70, 229, 0.55),
+      0 1px 2px rgba(15, 23, 41, 0.1);
+
+    --commit-gradient: var(--aurora);
+    --commit-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.4) inset,
+      0 6px 16px -4px rgba(79, 70, 229, 0.4),
+      0 1px 2px rgba(15, 23, 41, 0.08);
+
+    --color-status-active: #0d9488;
     --color-status-idle: #7889a5;
     --color-status-pending: #d97706;
-    --color-status-running: #0d9488;
+    --color-status-running: #2563eb;
     --color-status-error: #dc2626;
     --color-status-denied: #7889a5;
 
     /* Seamless chat surfaces — light */
     --color-surface-card: #ffffff;
-    --color-surface-card-border: transparent;
-    --color-accent-border: rgba(13, 148, 136, 0.12);
+    --color-surface-card-border: rgba(15, 23, 41, 0.05);
+    --color-accent-border: rgba(37, 99, 235, 0.12);
     --color-surface-pill: rgba(232, 236, 244, 0.6);
+    --shadow-card: 0 1px 2px rgba(15, 23, 41, 0.04), 0 8px 24px -12px rgba(15, 23, 41, 0.12);
+    --shadow-card-hover: 0 1px 2px rgba(15, 23, 41, 0.04), 0 12px 32px -12px rgba(79, 70, 229, 0.18);
 }
 
 /* ── Base Styles ── */
@@ -122,8 +204,13 @@ body,
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-  font-size: 15px;
-  line-height: 1.7;
+  /* 17px root means Tailwind's text-sm = 14.9px and text-base = 17px,
+     up from the previous 13.1/15. Reads as "calm and confident" for
+     stressed non-technical users instead of "tight and technical".
+     Trial banner / sidebar / form descriptions all benefit uniformly
+     without touching component code. */
+  font-size: 17px;
+  line-height: 1.65;
   letter-spacing: -0.003em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -164,6 +251,182 @@ h1, h2, h3, h4 {
   box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 6px 16px rgba(0,0,0,0.02);
 }
 
+/* ════════════════════════════════════════════════════════════
+   AURORA SYSTEM — utility classes
+   See docs/DESIGN_PRINCIPLES.md for usage rules.
+   ════════════════════════════════════════════════════════════ */
+
+/* The "launch" button — composer send, Please-fix-it, anything
+   that aims Noah at a problem. Reserved; do not overuse. */
+.btn-launch {
+  background: var(--aurora);
+  color: white;
+  box-shadow: var(--aurora-shadow-button);
+  transition: transform 0.12s ease, box-shadow 0.2s ease;
+}
+.btn-launch:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--aurora-shadow-button-hover);
+}
+.btn-launch:active:not(:disabled) { transform: translateY(0.5px); }
+.btn-launch:disabled {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* The "commit" button — subscribe, extend trial.
+   Same aurora identity as the launch button (no foreign greens), but
+   with a more substantial premium treatment: specular highlight strip,
+   multi-layer shadow depth, deeper saturation. The user reads:
+   "this is the same Noah I trust, but this is a bigger moment."
+   Think Apple Pay button — luminous, alive, never plastic. */
+.btn-commit {
+  position: relative;
+  background: var(--aurora);
+  color: white;
+  letter-spacing: -0.005em;
+  /* Stack of shadows builds depth:
+       1. inset top hairline — luminous edge
+       2. inset bottom hairline — pressed-from-above feel
+       3. outer halo — soft indigo glow that says "ready"
+       4. drop — hard ground anchor */
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.4) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.18) inset,
+    0 10px 28px -6px rgba(99, 102, 241, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.18);
+  transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  overflow: hidden;
+}
+/* Specular highlight — subtle "lit from above" gloss across the
+   whole top half of the button. Full-width (no inset insets) so it
+   doesn't read as a sub-button silhouette nested inside the main
+   button. Kept low-alpha so depth is felt, not seen. */
+.btn-commit::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), transparent);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.btn-commit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.18) inset,
+    0 16px 38px -6px rgba(99, 102, 241, 0.8),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.btn-commit:active:not(:disabled) { transform: translateY(0.5px); }
+
+/* Secondary action — solid blue, picks up an aurora hint on hover.
+   Used for in-card Submit on question/answer surfaces. */
+.btn-action {
+  background: var(--color-accent-blue);
+  color: white;
+  transition: box-shadow 0.2s ease, transform 0.12s ease;
+}
+.btn-action:hover:not(:disabled) {
+  box-shadow: 0 6px 18px -4px rgba(99, 102, 241, 0.45);
+  transform: translateY(-0.5px);
+}
+.btn-action:active:not(:disabled) { transform: translateY(0.5px); }
+
+/* Soft-elevation card — replaces hard 1px borders. Cards float
+   above the page via shadow + ~5%-lighter background. */
+.card-soft {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-surface-card-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.25s ease;
+}
+.card-soft.interactive:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* Aurora focus ring — for inputs, composer surface, focusable cards.
+   Replaces the OS default and the flat-blue ring. */
+.aurora-focus {
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.aurora-focus:focus,
+.aurora-focus:focus-within {
+  outline: none;
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow:
+    0 0 0 4px rgba(99, 102, 241, 0.08),
+    0 8px 32px -12px rgba(99, 102, 241, 0.4);
+}
+
+/* "Done" / "Sent" state — alive, not dead.
+   Replaces the grey-pill default for completed actions. The action
+   succeeded, so the visual should *feel* successful: aurora-teal
+   wash, soft glow, never flat grey. Pairs with a checkmark glyph in
+   the button content. */
+.btn-done {
+  background: var(--color-accent-green-soft);
+  color: var(--color-accent-green);
+  box-shadow: inset 0 0 0 1px rgba(20, 184, 166, 0.25);
+  cursor: default;
+  transition: none;
+}
+
+/* Aurora-tinted hover used ONLY on the small icon-tile inside a row,
+   not the row itself. The row stays neutral; the icon picks up the
+   aurora wash on hover/active so the identity signal is precise. */
+.icon-tile {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+}
+/* Quiet aurora wash — for everyday nav items (Scorecards, Knowledge). */
+.row-hover:hover .icon-tile,
+.icon-tile.active {
+  background: rgba(99, 102, 241, 0.18);
+  color: var(--color-text-primary);
+}
+/* Full aurora gradient — only on the primary launch nav item (New chat). */
+.row-hover:hover .icon-tile.launch,
+.icon-tile.launch.active {
+  background: var(--aurora);
+  color: white;
+  box-shadow: var(--aurora-glow);
+}
+
+/* Thinking dots — aurora-colored bouncing trio. Replaces monochrome
+   loading dots. Communicates "Noah is reasoning," not "the page is
+   loading." */
+.thinking-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--aurora);
+  animation: aurora-dot-bounce 1.2s ease-in-out infinite;
+}
+.thinking-dot:nth-child(2) { animation-delay: 0.15s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes aurora-dot-bounce {
+  0%, 80%, 100% { opacity: 0.35; transform: scale(0.85); }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+  }
+}
+
 /* ── Animations ── */
 @keyframes indeterminate {
   0% { transform: translateX(-100%); }
@@ -202,19 +465,6 @@ h1, h2, h3, h4 {
   }
 }
 
-@keyframes thinking-dot {
-  0%,
-  80%,
-  100% {
-    opacity: 0.25;
-    transform: scale(0.85);
-  }
-  40% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
 .animate-pulse-recording {
   animation: pulse-recording 1.5s ease-in-out infinite;
 }
@@ -227,12 +477,4 @@ h1, h2, h3, h4 {
   animation: slide-in-right 0.2s ease-out;
 }
 
-.thinking-dot:nth-child(1) {
-  animation: thinking-dot 1.4s ease-in-out infinite;
-}
-.thinking-dot:nth-child(2) {
-  animation: thinking-dot 1.4s ease-in-out 0.2s infinite;
-}
-.thinking-dot:nth-child(3) {
-  animation: thinking-dot 1.4s ease-in-out 0.4s infinite;
-}
+/* (.thinking-dot animation defined above with aurora-dot-bounce) */

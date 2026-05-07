@@ -1,12 +1,14 @@
 import { useCallback, useState } from "react";
-import { Check, Sparkles } from "lucide-react";
+import { Check } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import * as commands from "../lib/tauri-commands";
 import { useLocale } from "../i18n";
+import { useConsumerStore } from "../stores/consumerStore";
+import { formatTrialEndDate } from "../lib/trial-format";
 
 interface SubscribeModalProps {
   /** Which trigger fired the modal — drives copy. */
-  variant?: "first_fix" | "paywall" | "cap_hit";
+  variant?: "first_fix" | "second_issue" | "paywall" | "cap_hit";
   /** Called when user dismisses (clicks "Keep my free trial" or backdrop). */
   onDismiss: () => void;
   /** Called after a Checkout URL is opened in the browser. */
@@ -16,28 +18,46 @@ interface SubscribeModalProps {
 type Plan = "annual" | "monthly";
 
 /**
- * Subscribe / commitment-moment modal.
+ * Subscribe modal. Three customer-visible surfaces:
  *
- * Fires at the user's first RUN_STEP click ("Please fix it"). The fix
- * itself runs in the background regardless of how the user resolves
- * the modal — that's load-bearing, the fix-continues-note in the
- * footer says so explicitly.
+ *  - second_issue: "you're on a trial, plan options". The dismiss path
+ *    swaps to a one-time email→extension form. Customer never sees
+ *    countdown timers or hour counts — only a date.
+ *  - paywall: trial ended, no extension available.
+ *  - cap_hit: hidden 10-issue cap tripped during trial. Headline
+ *    "you've hit your trial quota" — no specifics on what the cap was.
  *
- * Stripe Checkout is configured with trial_period_days that matches
- * the user's remaining trial, so "Subscribe" → $0 today, card on file,
- * charge on trial-end. This is the highest-converting frame for
- * consumer subscription apps and matches what users see in the wild
- * (Calm / Headspace / CleanMyMac all use this pattern).
+ * The legacy first_fix variant is preserved for back-compat but no
+ * longer fires from any trigger; the first issue runs uninterrupted.
  */
 export function SubscribeModal({
-  variant = "first_fix",
+  variant = "second_issue",
   onDismiss,
   onCheckoutOpened,
 }: SubscribeModalProps) {
   const { t } = useLocale();
+  const ent = useConsumerStore((s) => s.entitlement);
+  const setEntitlement = useConsumerStore((s) => s.setEntitlement);
   const [plan, setPlan] = useState<Plan>("annual");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Extension path state — only used on dismiss surface.
+  const [extending, setExtending] = useState(false);
+  const [email, setEmail] = useState("");
+  const [extendError, setExtendError] = useState<string | null>(null);
+  const [extendSuccess, setExtendSuccess] = useState(false);
+  const [showExtendForm, setShowExtendForm] = useState(false);
+
+  // Already-extended trials (or non-trial states) skip the offer entirely;
+  // the dismiss path falls back to a plain text-link.
+  const canExtend =
+    !!ent &&
+    ent.status === "trialing" &&
+    !ent.trial_extended_at &&
+    (variant === "second_issue" ||
+      variant === "first_fix" ||
+      variant === "cap_hit");
 
   const handleSubscribe = useCallback(async () => {
     setLoading(true);
@@ -53,23 +73,54 @@ export function SubscribeModal({
     }
   }, [plan, onCheckoutOpened]);
 
+  const handleExtend = useCallback(async () => {
+    const trimmed = email.trim();
+    if (!trimmed) return;
+    setExtending(true);
+    setExtendError(null);
+    try {
+      const result = await commands.consumerTrialExtend(trimmed);
+      if (result.ok && result.entitlement) {
+        setEntitlement(result.entitlement);
+        setExtendSuccess(true);
+      } else {
+        const code = result.error ?? "errorGeneric";
+        setExtendError(extendErrorKey(code));
+      }
+    } catch (err) {
+      setExtendError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setExtending(false);
+    }
+  }, [email, setEntitlement]);
+
   const headline =
     variant === "first_fix"
       ? t("subscribe.firstFixHeadline")
-      : variant === "cap_hit"
-        ? t("subscribe.capHitHeadline")
-        : t("subscribe.paywallHeadline");
+      : variant === "second_issue"
+        ? t("subscribe.secondIssueHeadline")
+        : variant === "cap_hit"
+          ? t("subscribe.capHitHeadline")
+          : t("subscribe.paywallHeadline");
+
+  const dateLabel = formatTrialEndDate(
+    ent?.trial_ends_at ?? null,
+    ent?.tz_offset_minutes ?? null,
+  );
 
   const body =
     variant === "first_fix"
       ? t("subscribe.firstFixBody")
-      : variant === "cap_hit"
-        ? t("subscribe.capHitBody")
-        : t("subscribe.paywallBody");
+      : variant === "second_issue"
+        ? t("subscribe.secondIssueBody").replace("{date}", dateLabel)
+        : variant === "cap_hit"
+          ? t("subscribe.capHitBody")
+          : t("subscribe.paywallBody");
 
   // Only first_fix fires while a fix is in flight. paywall / cap_hit
-  // are blocking states where the fix didn't start, so the
-  // "fix continues" footnote would be a lie there.
+  // are blocking states where nothing's running, so the "fix continues"
+  // footnote would be a lie there. second_issue (the new default) also
+  // doesn't apply because no fix is currently in flight at session-start.
   const showFixContinuesNote = variant === "first_fix";
 
   return (
@@ -81,31 +132,15 @@ export function SubscribeModal({
         className="w-full max-w-[440px] mx-4 rounded-3xl bg-bg-primary border border-border-primary shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header — accent gradient strip + headline */}
-        <div className="relative px-7 pt-7 pb-5">
-          <div
-            aria-hidden
-            className="absolute inset-x-0 top-0 h-px"
-            style={{
-              background:
-                "linear-gradient(90deg, transparent, var(--color-accent-green), transparent)",
-              opacity: 0.5,
-            }}
-          />
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles
-              size={14}
-              strokeWidth={2}
-              className="text-accent-green"
-            />
-            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-accent-green">
-              {t("subscribe.trustBadge")}
-            </span>
-          </div>
-          <h3 className="text-[22px] font-semibold text-text-primary leading-tight tracking-tight">
+        {/* Header — value-led. Trust badge moves to a footnote
+            below the CTA so the user reads "keep Noah" before
+            "we promise we won't charge you". No decorative top
+            stripe — the headline carries the moment. */}
+        <div className="px-7 pt-7 pb-5">
+          <h3 className="text-[24px] font-semibold text-text-primary leading-[1.15] tracking-tight">
             {headline}
           </h3>
-          <p className="text-[13.5px] text-text-secondary mt-2.5 leading-relaxed">
+          <p className="text-[14.5px] text-text-secondary mt-3 leading-relaxed">
             {body}
           </p>
         </div>
@@ -122,24 +157,24 @@ export function SubscribeModal({
                 className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border cursor-pointer transition-all relative"
                 style={{
                   borderColor: selected
-                    ? "var(--color-accent-green)"
+                    ? "rgba(99, 102, 241, 0.5)"
                     : "var(--color-border-primary)",
                   borderWidth: selected ? "1.5px" : "1px",
                   backgroundColor: selected
-                    ? "var(--color-accent-green-bg, rgba(52, 199, 89, 0.07))"
+                    ? "rgba(99, 102, 241, 0.08)"
                     : "transparent",
                 }}
               >
-                {/* Custom radio with checkmark when selected */}
                 <span
                   className="flex items-center justify-center w-5 h-5 rounded-full border shrink-0 transition-all"
                   style={{
                     borderColor: selected
-                      ? "var(--color-accent-green)"
+                      ? "transparent"
                       : "var(--color-border-primary)",
-                    backgroundColor: selected
-                      ? "var(--color-accent-green)"
+                    background: selected
+                      ? "var(--aurora)"
                       : "transparent",
+                    boxShadow: selected ? "var(--aurora-glow)" : "none",
                   }}
                 >
                   {selected && (
@@ -169,14 +204,15 @@ export function SubscribeModal({
                 </div>
                 {savings && (
                   <span
-                    className="absolute -top-2 right-4 px-2 py-[1px] rounded-full text-[10px] font-semibold uppercase tracking-wider transition-colors"
+                    className="absolute -top-2 right-4 px-2 py-[1px] rounded-full text-[10px] font-semibold uppercase tracking-wider transition-all"
                     style={{
-                      backgroundColor: selected
-                        ? "var(--color-accent-green)"
-                        : "var(--color-bg-tertiary, #2a2a2a)",
-                      color: selected
-                        ? "var(--color-bg-primary)"
-                        : "var(--color-text-muted)",
+                      background: selected
+                        ? "var(--aurora)"
+                        : "var(--color-bg-tertiary)",
+                      color: selected ? "white" : "var(--color-text-muted)",
+                      boxShadow: selected
+                        ? "0 4px 10px -2px rgba(99, 102, 241, 0.5)"
+                        : "none",
                     }}
                   >
                     {savings}
@@ -192,29 +228,108 @@ export function SubscribeModal({
         )}
 
         {/* Actions */}
-        <div className="px-7 pt-4 pb-3">
+        <div className="px-7 pt-5 pb-3">
           <button
             onClick={handleSubscribe}
             disabled={loading}
-            className="w-full py-3 rounded-2xl bg-accent-green text-white text-[14.5px] font-semibold hover:bg-accent-green/90 transition-all disabled:opacity-50 cursor-pointer shadow-sm"
-            style={{
-              boxShadow:
-                "0 1px 0 rgba(255,255,255,0.08) inset, 0 4px 14px -4px rgba(52, 199, 89, 0.4)",
-            }}
+            className="w-full py-3.5 rounded-2xl text-[15.5px] font-semibold cursor-pointer disabled:opacity-50 btn-commit"
           >
             {loading ? t("subscribe.opening") : t("subscribe.subscribe")}
           </button>
-          <button
-            onClick={onDismiss}
-            className="w-full mt-2 py-2 text-[12.5px] text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
-          >
-            {t("subscribe.keepTrial")}
-          </button>
+          {/* Trust footnote — lives BELOW the CTA, not above it. The
+              user has already seen the headline and the price; this
+              is just reassurance, not the lead. */}
+          <p className="mt-2.5 text-[11.5px] text-text-muted text-center">
+            {t("subscribe.footnote")}
+          </p>
+
+          {/* Dismiss area: always shows a "Keep my free trial" link.
+              When the user is eligible for the one-time extension, an
+              additional "Need more time?" affordance sits above the
+              dismiss — never replaces it. */}
+          {canExtend && !showExtendForm && !extendSuccess && (
+            <button
+              onClick={() => setShowExtendForm(true)}
+              className="w-full mt-2 py-2 text-[12.5px] text-accent-green hover:underline transition-colors cursor-pointer"
+            >
+              {t("subscribe.extend.prompt")}
+            </button>
+          )}
+          {!extendSuccess && (
+            <button
+              onClick={onDismiss}
+              className="w-full mt-1 py-2 text-[12.5px] text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
+            >
+              {t("subscribe.keepTrial")}
+            </button>
+          )}
+
+          {showExtendForm && !extendSuccess && (
+            <div className="mt-3 space-y-2">
+              <p className="text-[12px] text-text-secondary text-center">
+                {t("subscribe.extend.subprompt")}
+              </p>
+              <div className="flex items-stretch gap-2">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setExtendError(null);
+                  }}
+                  placeholder={t("subscribe.extend.emailPlaceholder")}
+                  disabled={extending}
+                  className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-bg-secondary border border-border-primary text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-green disabled:opacity-50"
+                />
+                <button
+                  onClick={handleExtend}
+                  disabled={extending || !email.trim()}
+                  className="px-3 py-2 rounded-xl bg-bg-secondary border border-border-primary text-[12.5px] font-medium text-text-primary hover:bg-bg-tertiary transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                >
+                  {extending
+                    ? t("subscribe.extend.submitting")
+                    : t("subscribe.extend.submit")}
+                </button>
+              </div>
+              {extendError && (
+                <p className="text-[11.5px] text-accent-red text-center">
+                  {t(`subscribe.extend.${extendError}`)}
+                </p>
+              )}
+            </div>
+          )}
+
+          {extendSuccess && (
+            <div className="mt-3 space-y-2">
+              <p className="text-[12.5px] text-accent-green text-center font-medium">
+                {t("subscribe.extend.success")}
+              </p>
+              {ent?.bonus_code && (
+                <div
+                  className="rounded-xl px-3 py-3 text-center"
+                  style={{
+                    background: "var(--aurora-soft)",
+                    border: "1px solid rgba(99, 102, 241, 0.25)",
+                  }}
+                >
+                  <div className="text-[10.5px] uppercase tracking-[0.08em] text-text-muted mb-1">
+                    {t("subscribe.extend.codeLabel")}
+                  </div>
+                  <code className="font-mono text-[15px] font-semibold tracking-[0.05em] text-text-primary">
+                    {ent.bonus_code}
+                  </code>
+                </div>
+              )}
+              <button
+                onClick={onDismiss}
+                className="w-full py-2 text-[12.5px] text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
+              >
+                {t("subscribe.keepTrial")}
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Footnote — explicitly tells user that dismissing doesn't
-            cancel the fix. Without this the "Keep my free trial" CTA
-            is ambiguous (does it pause Noah? does it stop the fix?). */}
         {showFixContinuesNote && (
           <div className="px-7 pb-5 pt-1">
             <p className="text-[11px] text-text-muted text-center leading-snug">
@@ -225,4 +340,15 @@ export function SubscribeModal({
       </div>
     </div>
   );
+}
+
+function extendErrorKey(serverCode: string): string {
+  switch (serverCode) {
+    case "already_extended":
+      return "errorAlreadyExtended";
+    case "email_taken":
+      return "errorEmailTaken";
+    default:
+      return "errorGeneric";
+  }
 }

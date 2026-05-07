@@ -709,25 +709,36 @@ function ActionCard({
           </div>
         )}
 
-        {/* Action button */}
+        {/* Action button.
+            • RUN_STEP ("Please fix it") = LAUNCH register — same emotional
+              moment as the composer send: aiming Noah at a problem.
+            • WAIT_FOR_USER ("I've done this") = ACTION register — secondary,
+              outlined; not a launch.
+            • Disabled / taken / processing = neutral, never colored. */}
         <div className="px-5 pb-4">
           <button
             onClick={onDoIt}
             disabled={actionTaken || isProcessing}
             className={`
-              w-full py-2.5 rounded-lg text-base font-medium transition-all cursor-pointer
+              w-full py-2.5 rounded-xl text-base font-semibold cursor-pointer
+              flex items-center justify-center gap-2
               ${
                 actionTaken
-                  ? "bg-bg-tertiary text-text-muted cursor-default"
+                  ? "btn-done"
                   : isProcessing
                     ? "bg-bg-tertiary text-text-muted cursor-not-allowed"
                     : isWaitForUser
-                      ? "border-2 border-accent-green text-accent-green hover:bg-accent-green/10"
-                      : "bg-accent-blue text-white hover:bg-accent-blue/80"
+                      ? "border-2 border-accent-blue text-accent-blue hover:bg-accent-blue-soft transition-colors"
+                      : "btn-launch"
               }
             `}
           >
-            {actionTaken ? t("chat.sent") : prettyActionLabel}
+            {actionTaken && (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+            <span>{actionTaken ? t("chat.sent") : prettyActionLabel}</span>
           </button>
         </div>
       </div>
@@ -805,7 +816,7 @@ function UserQuestionCard({
               playbookName={progress.playbook_name}
             />
           )}
-          <div className="text-sm font-semibold text-accent-blue mb-1.5 tracking-wide">
+          <div className="text-sm font-semibold text-text-primary mb-1.5 tracking-wide">
             <InlineMarkdown text={first.header} />
           </div>
           <div className="text-base text-text-primary mb-3">
@@ -881,9 +892,20 @@ function UserQuestionCard({
           <button
             onClick={handleSubmit}
             disabled={actionTaken || isProcessing || !canSubmit}
-            className="w-full py-2 rounded-lg text-sm font-medium transition-all cursor-pointer bg-accent-blue text-white hover:bg-accent-blue/80 disabled:opacity-60"
+            className={`w-full py-2.5 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center gap-2 ${
+              actionTaken
+                ? "btn-done"
+                : isProcessing || !canSubmit
+                  ? "bg-bg-tertiary text-text-muted cursor-not-allowed"
+                  : "btn-action"
+            }`}
           >
-            {actionTaken ? t("chat.sent") : t("chat.submit")}
+            {actionTaken && (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+            <span>{actionTaken ? t("chat.sent") : t("chat.submit")}</span>
           </button>
           {!actionTaken && !isProcessing && onSendMessage && (
             <button
@@ -1413,10 +1435,10 @@ function useActivityLog(t: (key: string) => string) {
 function ThinkingDots({ status, elapsed }: { status: string | null; elapsed: number }) {
   return (
     <div className="flex items-center gap-2.5 py-1">
-      <div className="flex items-center gap-1">
-        <div className="w-1.5 h-1.5 rounded-full bg-text-muted thinking-dot" />
-        <div className="w-1.5 h-1.5 rounded-full bg-text-muted thinking-dot" />
-        <div className="w-1.5 h-1.5 rounded-full bg-text-muted thinking-dot" />
+      <div className="flex items-center gap-1.5">
+        <div className="thinking-dot" />
+        <div className="thinking-dot" />
+        <div className="thinking-dot" />
       </div>
       {status && (
         <span className="text-sm text-text-muted">
@@ -1720,7 +1742,10 @@ export function ChatPanel() {
 
   const inputCard = (
     <div className="max-w-4xl w-full mx-auto">
-      <div className="flex items-end gap-2 bg-bg-secondary rounded-2xl border border-border-primary focus-within:border-accent-blue/40 transition-colors shadow-sm">
+      {/* Composer is a "launch surface" — the aurora-focus class gives it
+          a subtle gradient ring + glow on focus-within, communicating
+          "you are about to issue a command to Noah". */}
+      <div className="flex items-end gap-2 bg-bg-secondary rounded-2xl border border-border-primary aurora-focus shadow-sm">
         <textarea
           ref={textareaRef}
           value={input}
@@ -1754,18 +1779,14 @@ export function ChatPanel() {
             <button
               onClick={handleSubmit}
               disabled={!input.trim()}
+              aria-label="Send to Noah"
               className={`
-                flex items-center justify-center w-9 h-9 rounded-lg
-                transition-all duration-200 cursor-pointer
-                ${
-                  input.trim()
-                    ? "bg-accent-blue text-white hover:bg-accent-blue/80"
-                    : "text-text-muted cursor-not-allowed"
-                }
+                flex items-center justify-center w-11 h-11 rounded-2xl
+                cursor-pointer ${input.trim() ? "btn-launch" : "btn-launch"}
               `}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M2 8L14 2L8 14V8H2Z" fill="currentColor" />
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M13 5l7 7-7 7" />
               </svg>
             </button>
           )}

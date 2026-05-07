@@ -478,11 +478,21 @@ export interface Entitlement {
   status: "none" | "trialing" | "active" | "past_due" | "canceled" | "expired";
   trial_started_at: number | null;
   trial_ends_at: number | null;
+  trial_extended_at?: number | null;
+  tz_offset_minutes?: number | null;
+  /** "License key" issued at trial extension; cosmetic artifact for the user. */
+  bonus_code?: string | null;
   period_start: number | null;
   period_end: number | null;
   usage_used: number;
   usage_limit: number;
   fix_count_total: number;
+}
+
+export interface TrialExtendResult {
+  ok: boolean;
+  entitlement?: Entitlement | null;
+  error?: string | null;
 }
 
 export interface FixCompletedResult {
@@ -530,8 +540,21 @@ export async function consumerGetEntitlement(): Promise<Entitlement | null> {
   return await invoke<Entitlement | null>("consumer_get_entitlement");
 }
 
-export async function consumerNotifyIssueStarted(): Promise<Entitlement | null> {
-  return await invoke<Entitlement | null>("consumer_notify_issue_started");
+export async function consumerNotifyIssueStarted(
+  tzOffsetMinutes?: number,
+): Promise<Entitlement | null> {
+  return await invoke<Entitlement | null>("consumer_notify_issue_started", {
+    tzOffsetMinutes:
+      typeof tzOffsetMinutes === "number"
+        ? tzOffsetMinutes
+        : new Date().getTimezoneOffset(),
+  });
+}
+
+export async function consumerTrialExtend(
+  email: string,
+): Promise<TrialExtendResult> {
+  return await invoke<TrialExtendResult>("consumer_trial_extend", { email });
 }
 
 export async function consumerNotifyFixCompleted(): Promise<FixCompletedResult | null> {

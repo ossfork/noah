@@ -190,7 +190,8 @@ function TRIAL_ENTITLEMENT() {
     plan: "trial",
     status: "trialing" as const,
     trial_started_at: Date.now() - 1000,
-    trial_ends_at: Date.now() + 7 * 86_400_000,
+    trial_ends_at: Date.now() + 2 * 86_400_000,
+    usage_limit: 10,
   };
 }
 function ACTIVE_ENTITLEMENT() {
@@ -590,83 +591,87 @@ describe("Window drag region on unauthenticated screens", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Subscribe modal — "first fix" commitment-moment timing
+// Subscribe modal — second-issue trigger
 // ═══════════════════════════════════════════════════════════════════════════
+//
+// Trigger model: the user's first issue (= first sessionId) runs uninterrupted.
+// The first message in any *different* sessionId, while still trialing, opens
+// the modal once. Localstorage flags drive the once-per-install guarantee.
 
-describe("Subscribe modal — first-fix prompt", () => {
-  const FIRST_FIX_KEY = "noah.firstFixPromptShown";
+describe("Subscribe modal — second-issue trigger", () => {
+  const FIRST_SESSION_KEY = "noah.firstIssueSessionId";
+  const SECOND_ISSUE_SHOWN_KEY = "noah.secondIssueModalShown";
 
   beforeEach(() => {
     useSessionStore.setState({ sessionId: "s1", isActive: true });
   });
 
-  it("opens with variant 'first_fix' on RUN_STEP during trial", async () => {
+  it("does NOT open during the first issue (records first session-id)", async () => {
     useConsumerStore.setState({ entitlement: TRIAL_ENTITLEMENT() });
 
     const { result } = renderHook(() => useAgent());
     await act(async () => {
-      await result.current.sendConfirmation("msg-1", "Continue", "RUN_STEP");
+      await result.current.sendMessage("first issue text");
+    });
+
+    expect(useConsumerStore.getState().subscribeModal).toBeNull();
+    expect(localStorage.getItem(FIRST_SESSION_KEY)).toBe("s1");
+    expect(localStorage.getItem(SECOND_ISSUE_SHOWN_KEY)).toBeNull();
+  });
+
+  it("opens with variant 'second_issue' when a different session sends a message", async () => {
+    useConsumerStore.setState({ entitlement: TRIAL_ENTITLEMENT() });
+    localStorage.setItem(FIRST_SESSION_KEY, "s0"); // prior issue happened
+
+    const { result } = renderHook(() => useAgent());
+    await act(async () => {
+      await result.current.sendMessage("a new problem in a new session");
     });
 
     expect(useConsumerStore.getState().subscribeModal).toEqual({
-      variant: "first_fix",
+      variant: "second_issue",
     });
-    expect(localStorage.getItem(FIRST_FIX_KEY)).toBe("1");
+    expect(localStorage.getItem(SECOND_ISSUE_SHOWN_KEY)).toBe("1");
   });
 
-  it("does NOT reopen on a subsequent RUN_STEP (shown-once per install)", async () => {
+  it("does NOT reopen on subsequent issues (shown once per install)", async () => {
     useConsumerStore.setState({ entitlement: TRIAL_ENTITLEMENT() });
-
-    const { result } = renderHook(() => useAgent());
-    // First click — modal opens.
-    await act(async () => {
-      await result.current.sendConfirmation("msg-1", "Continue", "RUN_STEP");
-    });
-    expect(useConsumerStore.getState().subscribeModal).not.toBeNull();
-
-    // User dismisses it.
-    act(() => useConsumerStore.getState().closeSubscribeModal());
-    expect(useConsumerStore.getState().subscribeModal).toBeNull();
-
-    // Second click — must NOT reopen.
-    await act(async () => {
-      await result.current.sendConfirmation("msg-2", "Continue", "RUN_STEP");
-    });
-    expect(useConsumerStore.getState().subscribeModal).toBeNull();
-  });
-
-  it("does NOT open for WAIT_FOR_USER confirmations", async () => {
-    useConsumerStore.setState({ entitlement: TRIAL_ENTITLEMENT() });
+    localStorage.setItem(FIRST_SESSION_KEY, "s0");
+    localStorage.setItem(SECOND_ISSUE_SHOWN_KEY, "1");
 
     const { result } = renderHook(() => useAgent());
     await act(async () => {
-      await result.current.sendConfirmation(
-        "msg-1",
-        "I've done this",
-        "WAIT_FOR_USER",
-      );
+      await result.current.sendMessage("yet another problem");
     });
+
     expect(useConsumerStore.getState().subscribeModal).toBeNull();
   });
 
   it("does NOT open when the user is already on an active subscription", async () => {
     useConsumerStore.setState({ entitlement: ACTIVE_ENTITLEMENT() });
+    localStorage.setItem(FIRST_SESSION_KEY, "s0");
 
     const { result } = renderHook(() => useAgent());
     await act(async () => {
-      await result.current.sendConfirmation("msg-1", "Continue", "RUN_STEP");
+      await result.current.sendMessage("another question");
     });
+
     expect(useConsumerStore.getState().subscribeModal).toBeNull();
   });
 
-  it("does NOT open when entitlement has not hydrated yet", async () => {
-    useConsumerStore.setState({ entitlement: null });
+  it("opens the cap_hit variant when trial usage_used >= usage_limit", async () => {
+    const ent = TRIAL_ENTITLEMENT();
+    ent.usage_used = ent.usage_limit;
+    useConsumerStore.setState({ entitlement: ent });
 
     const { result } = renderHook(() => useAgent());
     await act(async () => {
-      await result.current.sendConfirmation("msg-1", "Continue", "RUN_STEP");
+      await result.current.sendMessage("hit cap during trial");
     });
-    expect(useConsumerStore.getState().subscribeModal).toBeNull();
+
+    expect(useConsumerStore.getState().subscribeModal).toEqual({
+      variant: "cap_hit",
+    });
   });
 });
 

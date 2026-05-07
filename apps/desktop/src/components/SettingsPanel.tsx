@@ -2,124 +2,44 @@ import { useState, useEffect, useCallback } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTheme, type ThemePreference } from "../hooks/useTheme";
 import * as commands from "../lib/tauri-commands";
-import { useLocale, LOCALE_OPTIONS } from "../i18n";
+import { useLocale } from "../i18n";
 import { BillingSection } from "./BillingSection";
 
+/**
+ * Trimmed Settings — clean app, no bells and whistles.
+ *
+ * Three sections only: Billing, Appearance, Help & Feedback. Everything
+ * else (BYOK input, proactive-suggestions toggle, auto-heal toggle,
+ * language picker) was removed for the consumer launch. The Tauri
+ * commands for those features still exist server-side so they can be
+ * re-surfaced later without breaking compatibility.
+ */
 export function SettingsPanel() {
-  const [apiKey, setApiKey] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState("");
-  const [authMode, setAuthMode] = useState<"api_key" | "proxy">("api_key");
+  const [authMode, setAuthMode] = useState<"api_key" | "proxy">("proxy");
 
   useEffect(() => {
     commands.getAppVersion().then(setVersion).catch(() => {});
     commands.getAuthMode().then(setAuthMode).catch(() => {});
-    setApiKey("");
-    setSaved(false);
-    setError(null);
   }, []);
-
-  const [proactiveEnabled, setProactiveEnabled] = useState(true);
-
-  useEffect(() => {
-    commands.getProactiveEnabled().then(setProactiveEnabled).catch(() => {});
-  }, []);
-
-  const handleToggleProactive = useCallback(async () => {
-    const next = !proactiveEnabled;
-    setProactiveEnabled(next);
-    try {
-      await commands.setProactiveEnabled(next);
-    } catch (err) {
-      console.error("Failed to save proactive setting:", err);
-      setProactiveEnabled(!next); // revert on error
-    }
-  }, [proactiveEnabled]);
-
-  const [autoHealEnabled, setAutoHealEnabled] = useState(false);
-
-  useEffect(() => {
-    commands.getAutoHealEnabled().then(setAutoHealEnabled).catch(() => {});
-  }, []);
-
-  const handleToggleAutoHeal = useCallback(async () => {
-    const next = !autoHealEnabled;
-    setAutoHealEnabled(next);
-    try {
-      await commands.setAutoHealEnabled(next);
-    } catch (err) {
-      console.error("Failed to save auto-heal setting:", err);
-      setAutoHealEnabled(!next); // revert on error
-    }
-  }, [autoHealEnabled]);
 
   const { preference: themePref, setTheme } = useTheme();
-  const { t, preference: localePref, setLocale } = useLocale();
-
-  const [reportingBug, setReportingBug] = useState(false);
+  const { t } = useLocale();
 
   const handleReportProblem = useCallback(async () => {
-    setReportingBug(true);
-    try {
-      const ctx = await commands.getFeedbackContext();
+    // Direct support email — short, no GitHub round-trip, no auto-attached
+    // diagnostics. Keeps the surface clean and makes the conversation
+    // immediately personal ("reply to this email — we read everything").
+    const subject = encodeURIComponent("Noah feedback");
+    const body = encodeURIComponent(
+      `\n\n\n---\nNoah v${version || "?"} — please describe the issue above this line.`,
+    );
+    await openUrl(`mailto:support@onnoah.app?subject=${subject}&body=${body}`);
+  }, [version]);
 
-      // Build diagnostic section
-      let diag = `\n\n---\n**Diagnostics (auto-attached)**\n`;
-      diag += `- Noah v${ctx.version}\n`;
-      diag += `- OS: ${ctx.os}\n`;
-
-      if (ctx.traces.length > 0) {
-        diag += `\n<details><summary>Last ${ctx.traces.length} LLM trace(s)</summary>\n\n`;
-        for (const t of ctx.traces) {
-          diag += `**${t.timestamp}**\n`;
-          diag += `Request: \`${t.request.replace(/`/g, "'")}\`\n`;
-          diag += `Response: \`${t.response.replace(/`/g, "'")}\`\n\n`;
-        }
-        diag += `</details>\n`;
-      }
-
-      const body = encodeURIComponent(
-        `**What happened?**\n\n(Describe what you expected vs what actually happened)\n\n**Steps to reproduce**\n\n1. \n2. \n3. \n${diag}`,
-      );
-      const title = encodeURIComponent("Bug report from Noah app");
-      const url = `https://github.com/xuy/noah/issues/new?title=${title}&body=${body}&labels=bug`;
-
-      await openUrl(url);
-    } catch (err) {
-      console.error("Failed to gather feedback context:", err);
-      // Fallback: open issues page without context
-      await openUrl("https://github.com/xuy/noah/issues/new");
-    } finally {
-      setReportingBug(false);
-    }
+  const handleOpenHelp = useCallback(async () => {
+    await openUrl("https://help.onnoah.app");
   }, []);
-
-  const handleSaveKey = useCallback(async () => {
-    const key = apiKey.trim();
-    if (!key) return;
-    if (!key.startsWith("sk-ant-")) {
-      setError(t("settings.errorApiKeyInvalid"));
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-    try {
-      await commands.setApiKey(key);
-      setSaved(true);
-      setApiKey("");
-      setAuthMode("api_key");
-      setTimeout(() => setSaved(false), 2000);
-    } catch (err) {
-      setError(
-        `Failed to save: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    } finally {
-      setSaving(false);
-    }
-  }, [apiKey, t]);
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto bg-bg-primary">
@@ -130,125 +50,8 @@ export function SettingsPanel() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           {authMode === "proxy" && <BillingSection />}
-          <section className="rounded-2xl border border-border-primary bg-bg-secondary p-5">
-            <h2 className="text-xs font-semibold text-text-primary uppercase tracking-wider mb-3">
-              {authMode === "proxy" ? t("advanced.byokTitle") : t("settings.apiKey")}
-            </h2>
-            {authMode === "proxy" ? (
-              <>
-                <p className="text-sm text-text-muted mb-3">
-                  {t("advanced.byokDesc")}
-                </p>
-                <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSaveKey();
-                  }}
-                  placeholder="sk-ant-..."
-                  className="w-full px-3 py-2 rounded-lg bg-bg-input border border-border-primary text-sm text-text-primary placeholder-text-muted outline-none focus:border-border-focus transition-colors"
-                />
-                {error && (
-                  <p className="text-xs text-accent-red mt-2">{error}</p>
-                )}
-                <button
-                  onClick={handleSaveKey}
-                  disabled={!apiKey.trim() || saving}
-                  className="mt-3 w-full py-2 rounded-lg bg-bg-tertiary text-text-primary text-sm font-medium hover:bg-bg-hover transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {saving
-                    ? t("settings.saving")
-                    : saved
-                      ? t("settings.saved")
-                      : t("advanced.byokSave")}
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-text-muted mb-3">
-                  {t("settings.replaceKeyPrompt")}
-                </p>
-                <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSaveKey();
-                  }}
-                  placeholder="sk-ant-..."
-                  className="w-full px-3 py-2 rounded-lg bg-bg-input border border-border-primary text-sm text-text-primary placeholder-text-muted outline-none focus:border-border-focus transition-colors"
-                />
-                {error && (
-                  <p className="text-xs text-accent-red mt-2">{error}</p>
-                )}
-                <button
-                  onClick={handleSaveKey}
-                  disabled={!apiKey.trim() || saving}
-                  className="mt-3 w-full py-2 rounded-lg bg-accent-green text-white text-sm font-medium hover:bg-accent-green/80 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {saving ? t("settings.saving") : saved ? t("settings.saved") : t("settings.updateApiKey")}
-                </button>
-              </>
-            )}
-          </section>
 
-          <section className="rounded-2xl border border-border-primary bg-bg-secondary p-5">
-            <h2 className="text-xs font-semibold text-text-primary uppercase tracking-wider mb-3">
-              {t("settings.proactiveSuggestions")}
-            </h2>
-            <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0 mr-3">
-                <p className="text-sm text-text-secondary">
-                  {t("settings.notifyIssues")}
-                </p>
-                <p className="text-xs text-text-muted mt-1">
-                  {t("settings.proactiveDesc")}
-                </p>
-              </div>
-              <button
-                onClick={handleToggleProactive}
-                className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer shrink-0 ${
-                  proactiveEnabled ? "bg-accent-green" : "bg-bg-tertiary"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                    proactiveEnabled ? "translate-x-4" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-border-primary bg-bg-secondary p-5">
-            <h2 className="text-xs font-semibold text-text-primary uppercase tracking-wider mb-3">
-              {t("settings.autoHeal")}
-            </h2>
-            <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0 mr-3">
-                <p className="text-sm text-text-secondary">
-                  {t("settings.autoHealDesc")}
-                </p>
-                <p className="text-xs text-text-muted mt-1">
-                  {t("settings.autoHealSafety")}
-                </p>
-              </div>
-              <button
-                onClick={handleToggleAutoHeal}
-                className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer shrink-0 ${
-                  autoHealEnabled ? "bg-accent-green" : "bg-bg-tertiary"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                    autoHealEnabled ? "translate-x-4" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
-          </section>
-
+          {/* Appearance */}
           <section className="rounded-2xl border border-border-primary bg-bg-secondary p-5">
             <h2 className="text-xs font-semibold text-text-primary uppercase tracking-wider mb-3">
               {t("settings.appearance")}
@@ -277,94 +80,38 @@ export function SettingsPanel() {
             </p>
           </section>
 
-          <section className="rounded-2xl border border-border-primary bg-bg-secondary p-5">
-            <h2 className="text-xs font-semibold text-text-primary uppercase tracking-wider mb-3">
-              {t("settings.language")}
-            </h2>
-            <div className="flex rounded-lg border border-border-primary overflow-hidden">
-              {LOCALE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setLocale(opt.value)}
-                  className={`flex-1 py-2 text-sm font-medium transition-colors cursor-pointer ${
-                    localePref === opt.value
-                      ? "bg-accent-blue/15 text-accent-blue"
-                      : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary/50"
-                  }`}
-                >
-                  {t(opt.labelKey)}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-text-muted mt-2">
-              {t(LOCALE_OPTIONS.find((opt) => opt.value === localePref)?.descKey ?? "settings.langAutoDesc")}
-            </p>
-          </section>
-
+          {/* Help & Feedback — full-width, sits at the bottom */}
           <section className="rounded-2xl border border-border-primary bg-bg-secondary p-5 lg:col-span-2">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-xs font-semibold text-text-primary uppercase tracking-wider mb-3">
-                  {t("settings.helpFeedback")}
-                </h2>
-              </div>
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <h2 className="text-xs font-semibold text-text-primary uppercase tracking-wider">
+                {t("settings.helpFeedback")}
+              </h2>
               <p className="text-xs text-text-muted whitespace-nowrap">
                 {t("settings.version", { version: version || "..." })}
               </p>
             </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               <button
                 onClick={handleReportProblem}
-                disabled={reportingBug}
-                className="flex items-center gap-2 w-full px-3 py-3 rounded-lg text-sm text-text-secondary hover:bg-bg-tertiary hover:text-text-primary transition-colors cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-2 w-full px-3 py-3 rounded-lg text-sm text-text-secondary hover:bg-bg-tertiary hover:text-text-primary transition-colors cursor-pointer"
               >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <circle
-                    cx="7"
-                    cy="7"
-                    r="5.5"
-                    stroke="currentColor"
-                    strokeWidth="1.2"
-                  />
-                  <path
-                    d="M5.5 5.5C5.5 4.67 6.17 4 7 4C7.83 4 8.5 4.67 8.5 5.5C8.5 6.33 7.83 7 7 7V8"
-                    stroke="currentColor"
-                    strokeWidth="1.2"
-                    strokeLinecap="round"
-                  />
-                  <circle cx="7" cy="9.5" r="0.5" fill="currentColor" />
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                  <polyline points="22,6 12,13 2,6" />
                 </svg>
-                {reportingBug ? t("settings.gatheringInfo") : t("settings.reportProblem")}
+                {t("settings.contactSupport")}
               </button>
-              <a
-                href="https://platform.claude.com/settings/keys"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-3 rounded-lg text-sm text-text-secondary hover:bg-bg-tertiary hover:text-text-primary transition-colors"
+              <button
+                onClick={handleOpenHelp}
+                className="flex items-center gap-2 w-full px-3 py-3 rounded-lg text-sm text-text-secondary hover:bg-bg-tertiary hover:text-text-primary transition-colors cursor-pointer"
               >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M7 1.5V5.5L10.5 3.5M7 1.5L3.5 3.5V7.5L7 5.5M7 1.5L10.5 3.5M10.5 3.5V7.5L7 9.5M7 9.5L3.5 7.5M7 9.5V12.5M3.5 7.5L7 12.5M10.5 7.5L7 12.5"
-                    stroke="currentColor"
-                    strokeWidth="1.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
-                {t("settings.anthropicConsole")}
-              </a>
+                {t("settings.helpAndFaq")}
+              </button>
             </div>
           </section>
         </div>

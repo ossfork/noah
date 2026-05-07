@@ -411,11 +411,13 @@ export function Sidebar({ session }: SidebarProps) {
         <div className="flex items-center gap-1">
           <button
             onClick={handleNewChat}
-            className="flex items-center gap-2.5 flex-1 px-3 py-2 rounded-lg text-sm text-text-primary hover:bg-bg-tertiary/50 transition-colors cursor-pointer"
+            className="row-hover flex items-center gap-2.5 flex-1 px-2.5 py-1.5 rounded-lg text-sm text-text-primary hover:bg-bg-tertiary/40 transition-colors cursor-pointer"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 3V11M3 7H11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
+            <span className="icon-tile launch">
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                <path d="M7 3V11M3 7H11" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+              </svg>
+            </span>
             {t("sidebar.newChat")}
           </button>
           {!isMac && (
@@ -429,34 +431,24 @@ export function Sidebar({ session }: SidebarProps) {
           )}
         </div>
 
-        {/* Health */}
-        <button
-          onClick={() => setActiveView(activeView === "health" ? "chat" : "health")}
-          className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-            activeView === "health"
-              ? "bg-bg-tertiary text-text-primary"
-              : "text-text-secondary hover:bg-bg-tertiary/50 hover:text-text-primary"
-          }`}
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M7 1L8.5 3.5L11.5 2.5L10.5 5.5L13 7L10.5 8.5L11.5 11.5L8.5 10.5L7 13L5.5 10.5L2.5 11.5L3.5 8.5L1 7L3.5 5.5L2.5 2.5L5.5 3.5L7 1Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
-          </svg>
-          {t("sidebar.health")}
-        </button>
+        {/* Scorecards / Health: removed for v1 — clean app, no extras.
+            Code paths preserved server-side; re-introduce when ready. */}
 
         {/* Knowledge */}
         <button
           onClick={() => setActiveView(activeView === "knowledge" ? "chat" : "knowledge")}
-          className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+          className={`row-hover flex items-center gap-2.5 w-full px-2.5 py-1.5 rounded-lg text-sm cursor-pointer transition-colors ${
             activeView === "knowledge"
               ? "bg-bg-tertiary text-text-primary"
-              : "text-text-secondary hover:bg-bg-tertiary/50 hover:text-text-primary"
+              : "text-text-secondary hover:bg-bg-tertiary/40 hover:text-text-primary"
           }`}
         >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M2 2.5C2 2.5 3.5 1.5 7 1.5C10.5 1.5 12 2.5 12 2.5V11.5C12 11.5 10.5 10.5 7 10.5C3.5 10.5 2 11.5 2 11.5V2.5Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
-            <path d="M7 1.5V10.5" stroke="currentColor" strokeWidth="1.1" />
-          </svg>
+          <span className={`icon-tile ${activeView === "knowledge" ? "active" : ""}`}>
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+              <path d="M2 2.5C2 2.5 3.5 1.5 7 1.5C10.5 1.5 12 2.5 12 2.5V11.5C12 11.5 10.5 10.5 7 10.5C3.5 10.5 2 11.5 2 11.5V2.5Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+              <path d="M7 1.5V10.5" stroke="currentColor" strokeWidth="1.1" />
+            </svg>
+          </span>
           {t("sidebar.knowledge")}
         </button>
 

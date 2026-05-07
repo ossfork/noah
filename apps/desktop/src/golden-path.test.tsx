@@ -2,21 +2,19 @@
 /**
  * Golden-path end-to-end test.
  *
- * Walks the one flow that matters most — the acquisition loop:
+ * Walks the acquisition loop in the post-redesign trial model:
  *
- *   1. User has just installed Noah (fresh, no sessions).
+ *   1. User installed Noah and has already had a prior issue (first-issue
+ *      session id is pre-seeded into localStorage to simulate this).
  *   2. Tile picker appears; user picks a category + clarifier.
- *   3. Noah's backend responds with a Situation/Plan/Action card.
- *   4. User clicks the action button ("Please fix it").
- *   5. Subscribe modal appears (first-fix commitment moment).
- *   6. User clicks Subscribe → Stripe Checkout URL opens in browser.
- *   7. `noah://subscribed?session_id=…` deep link arrives → backend confirms.
+ *   3. ChatPanel auto-sends the seed → second-issue trigger fires →
+ *      subscribe modal opens with variant="second_issue".
+ *   4. User clicks Subscribe → Stripe Checkout URL opens in browser.
+ *   5. `noah://subscribed?session_id=…` deep link arrives → backend confirms.
  *
  * Unlike `onboarding.test.tsx` (which stubs ChatPanel / SubscribeModal to
  * isolate individual regressions), THIS file renders the real ChatPanel and
- * real SubscribeModal so we exercise the whole tree the user sees. If any
- * link in the chain breaks — seed pickup, SPA rendering, modal variant,
- * Stripe URL open, deep-link round-trip — this test goes red.
+ * real SubscribeModal so we exercise the whole tree the user sees.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup, act, waitFor } from "@testing-library/react";
@@ -176,11 +174,13 @@ function TRIAL_ENTITLEMENT() {
     plan: "trial",
     status: "trialing" as const,
     trial_started_at: Date.now() - 1000,
-    trial_ends_at: Date.now() + 7 * 86_400_000,
+    trial_ends_at: Date.now() + 2 * 86_400_000,
+    trial_extended_at: null,
+    tz_offset_minutes: new Date().getTimezoneOffset(),
     period_start: null,
     period_end: null,
     usage_used: 0,
-    usage_limit: 100,
+    usage_limit: 10,
     fix_count_total: 0,
   };
 }
@@ -272,58 +272,45 @@ afterEach(() => {
   cleanup();
 });
 
-describe("Golden path — install → tile → SPA → action → subscribe → pay", () => {
+describe("Golden path — second-issue → subscribe → pay", () => {
+  // Pre-seed localStorage so this user counts as already past their first
+  // issue. Each test then exercises the second-issue trigger on the first
+  // message of the new session.
+  beforeEach(() => {
+    localStorage.setItem("noah.firstIssueSessionId", "s-prior");
+  });
+
   it("walks the full acquisition loop end to end", async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // ── Step 1: tile picker is what a first-time user sees ───────────────
+    // Tile picker is what a returning user still sees on a fresh launch
+    // when they have no in-flight session loaded.
     expect(
       await screen.findByText(/What's going on with your Mac/),
     ).toBeTruthy();
 
-    // ── Step 2: pick a category, add a clarifier, continue ───────────────
     await user.click(screen.getByText("Wi-Fi or internet issues"));
     const clarifier = await screen.findByRole("textbox");
     await user.type(clarifier, "drops every 10 min at home");
     await user.click(screen.getByText("Continue"));
 
-    // ── Step 3: ChatPanel mounts, picks up the seed, auto-sends it ───────
-    await waitFor(
-      () => {
-        expect(commands.sendMessageV2).toHaveBeenCalled();
-      },
-      { timeout: 3000 },
-    );
+    // Seed auto-sends → second-issue modal pops in parallel.
+    await waitFor(() => {
+      expect(commands.sendMessageV2).toHaveBeenCalled();
+    });
     const [, firstMessage] = vi.mocked(commands.sendMessageV2).mock.calls[0];
     expect(firstMessage).toContain("Wi-Fi or internet issues");
-    expect(firstMessage).toContain("drops every 10 min at home");
 
-    // ── Step 4: Noah renders its Situation + Plan + action button ────────
     expect(
-      await screen.findByText(/Your Wi-Fi is dropping frequently/),
-    ).toBeTruthy();
-    expect(await screen.findByText(/Reset the Wi-Fi adapter/)).toBeTruthy();
-    const fixButton = await screen.findByRole("button", {
-      name: "Please fix it",
-    });
-
-    // Nothing should be paywalling yet — we're inside the trial.
-    expect(useConsumerStore.getState().subscribeModal).toBeNull();
-
-    // ── Step 5: user commits to the fix → subscribe modal appears ────────
-    await user.click(fixButton);
-    expect(
-      await screen.findByText(/Keep Noah, after the trial/),
+      await screen.findByText(/Keep Noah on your Mac/),
     ).toBeTruthy();
     expect(useConsumerStore.getState().subscribeModal).toEqual({
-      variant: "first_fix",
+      variant: "second_issue",
     });
 
-    // ── Step 6: user subscribes → Stripe Checkout URL is opened ──────────
-    await user.click(screen.getByRole("button", { name: "Start subscription" }));
+    await user.click(screen.getByRole("button", { name: "Keep Noah" }));
     await waitFor(() => {
-      // Default plan selection is "annual" — matches en.json.
       expect(commands.consumerBillingCheckoutUrl).toHaveBeenCalledWith(
         "annual",
       );
@@ -332,7 +319,6 @@ describe("Golden path — install → tile → SPA → action → subscribe → 
       );
     });
 
-    // ── Step 7: Stripe returns via deep link → backend confirms ──────────
     expect(deepLinkRef.current).not.toBeNull();
     await act(async () => {
       await deepLinkRef.current!([
@@ -356,14 +342,10 @@ describe("Golden path — install → tile → SPA → action → subscribe → 
     );
     await user.click(screen.getByText("Continue"));
 
-    await screen.findByText(/Your Wi-Fi is dropping frequently/);
-    await user.click(
-      await screen.findByRole("button", { name: "Please fix it" }),
-    );
+    await screen.findByText(/Keep Noah on your Mac/);
 
-    // Switch the radio selection from annual (default) to monthly.
     await user.click(screen.getByLabelText(/Monthly/));
-    await user.click(screen.getByRole("button", { name: "Start subscription" }));
+    await user.click(screen.getByRole("button", { name: "Keep Noah" }));
 
     await waitFor(() => {
       expect(commands.consumerBillingCheckoutUrl).toHaveBeenCalledWith(
@@ -372,7 +354,7 @@ describe("Golden path — install → tile → SPA → action → subscribe → 
     });
   });
 
-  it("'Keep my free trial' dismisses the modal and keeps the fix ready", async () => {
+  it("'Keep my free trial' dismisses without opening checkout", async () => {
     const user = userEvent.setup();
     render(<App />);
 
@@ -384,15 +366,10 @@ describe("Golden path — install → tile → SPA → action → subscribe → 
     );
     await user.click(screen.getByText("Continue"));
 
-    await screen.findByText(/Your Wi-Fi is dropping frequently/);
-    await user.click(
-      await screen.findByRole("button", { name: "Please fix it" }),
-    );
-    await screen.findByText(/Keep Noah, after the trial/);
+    await screen.findByText(/Keep Noah on your Mac/);
 
-    await user.click(screen.getByRole("button", { name: "Keep my free trial" }));
+    await user.click(screen.getByRole("button", { name: "Not yet — keep my free trial" }));
     expect(useConsumerStore.getState().subscribeModal).toBeNull();
-    // No Stripe call was made.
     expect(commands.consumerBillingCheckoutUrl).not.toHaveBeenCalled();
     expect(openUrlMock).not.toHaveBeenCalled();
   });
