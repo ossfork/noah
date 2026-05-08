@@ -76,23 +76,16 @@ When enabled, Noah automatically triages failing health checks, picks the right 
 ### Download
 
 Go to [Releases](https://github.com/xuy/noah/releases) and grab the latest:
-- **macOS** — `.dmg` (Apple Silicon)
+- **macOS** — `.dmg` (universal, Apple Silicon + Intel) — signed with our Apple Developer ID and notarized by Apple, so Gatekeeper opens it cleanly on first launch
 - **Windows** — `.msi` or `.exe` installer (x64)
 
-> **macOS note:** Noah isn't signed with an Apple Developer certificate yet. Right-click the app, click "Open", then "Open" again. One-time only.
+### Try it free
 
-### API key
+Open Noah and describe what's broken. Your trial starts on first message. After the trial, $4.99/month or $50/year keeps it going — manage from Settings → Billing.
 
-Noah uses Claude (by Anthropic) to reason through problems. You need an API key:
+### Bring your own Anthropic key (optional, for power users)
 
-1. Get one at [console.anthropic.com](https://console.anthropic.com)
-2. Paste it on Noah's setup screen — done
-
-Your key stays on your machine. It's only used to talk to Anthropic's API directly.
-
-### Fleet enrollment (optional)
-
-If your IT team uses Noah Fleet, they'll give you an enrollment link. Paste it into Noah's Health tab to connect your machine to their dashboard. This lets your IT team monitor health scores, push playbooks, and resolve issues remotely — while you keep full control of your device.
+The default flow uses Noah's hosted backend so you don't need to manage anything. If you'd rather route Claude calls directly with your own Anthropic API key — set the `ANTHROPIC_API_KEY` environment variable before launching Noah. Your key stays local and never touches our servers.
 
 ## Safety
 
