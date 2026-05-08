@@ -135,7 +135,6 @@ vi.mock("./lib/tauri-commands", () => ({
   clearAuth: vi.fn().mockResolvedValue(undefined),
   getAuthMode: vi.fn().mockResolvedValue("proxy"),
   checkProxyStatus: vi.fn().mockResolvedValue('{"status":"active"}'),
-  redeemInviteCode: vi.fn().mockResolvedValue(undefined),
   getAppVersion: vi.fn().mockResolvedValue("0.18.0"),
   trackEvent: vi.fn().mockResolvedValue(undefined),
   getTelemetryConsent: vi.fn().mockResolvedValue(true),

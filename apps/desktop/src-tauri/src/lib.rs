@@ -667,7 +667,6 @@ pub fn run() {
             commands::safety::undo_change,
             commands::settings::has_api_key,
             commands::settings::set_api_key,
-            commands::settings::redeem_invite_code,
             commands::settings::get_auth_mode,
             commands::settings::check_proxy_status,
             commands::settings::clear_auth,

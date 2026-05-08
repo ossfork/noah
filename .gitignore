@@ -21,8 +21,25 @@ latest.json
 # Product Roadmap (local research)
 _roadmap/
 
-# Claude Code local settings
+# Claude Code local settings + agent skills
 .claude/
+.agents/
+
+# Playwright MCP browser-automation cache + console logs
+.playwright-mcp/
+
+# Working / scratch area. Anything that needs to be shared but isn't
+# OSS-appropriate lives in noah-consumer/private/ instead.
+experimental/
+
+# Designer / handoff artifacts (these belong in noah-consumer/private/handoff/)
+*[hH]andoff*.html
+*[hH]andoff*.md
+SYSTEM-PROMPT-AND-TOOL-REVIEW.md
+
+# Engineering scratch notes that happen to land in playbook dirs
+apps/desktop/src-tauri/playbooks/TODO-*.md
+apps/desktop/src-tauri/playbooks/_*.md
 
 # Test artifacts (generated, not source)
 tests/__pycache__/
