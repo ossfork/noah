@@ -4,14 +4,38 @@ import * as commands from "../lib/tauri-commands";
 import { useConsumerStore } from "../stores/consumerStore";
 import { useLocale } from "../i18n";
 
-function formatDate(ms: number | null | undefined, locale: string): string {
+/**
+ * Friendly billing-context date: "Mon, May 11" if same calendar year,
+ * "Mon, May 11, 2027" if it's a future year. Mirrors how Apple, Stripe
+ * dashboards, and most consumer SaaS surface "next billing" lines —
+ * the day-of-week makes it parseable at a glance, the year is suppressed
+ * unless ambiguous.
+ */
+function friendlyDate(ms: number | null | undefined, locale: string): string {
   if (!ms) return "—";
+  const d = new Date(ms);
+  const sameYear = d.getFullYear() === new Date().getFullYear();
   try {
-    return new Date(ms).toLocaleDateString(locale);
+    return d.toLocaleDateString(locale, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      ...(sameYear ? {} : { year: "numeric" }),
+    });
   } catch {
-    return new Date(ms).toISOString().slice(0, 10);
+    return d.toISOString().slice(0, 10);
   }
 }
+
+const PRICE_BY_PLAN: Record<string, string> = {
+  monthly: "$4.99/month",
+  annual: "$50/year",
+};
+
+const PLAN_LABEL: Record<string, string> = {
+  monthly: "Monthly plan",
+  annual: "Annual plan",
+};
 
 export function BillingSection() {
   const { t, locale } = useLocale();
@@ -121,16 +145,56 @@ export function BillingSection() {
     }
   })();
 
-  const endLine =
-    entitlement.status === "trialing" && entitlement.trial_ends_at
-      ? t("billing.trialEndsAt", {
-          date: formatDate(entitlement.trial_ends_at, locale),
-        })
-      : entitlement.status === "active" && entitlement.period_end
-        ? t("billing.periodEndsAt", {
-            date: formatDate(entitlement.period_end, locale),
-          })
-        : "";
+  // Heuristic for "is the active sub still inside its first billing
+  // period (Stripe trial)?" After Stripe charges, period_end advances
+  // by a month or a year, putting it well beyond trial_ends_at. Before
+  // that first charge, period_end ≈ trial_ends_at. Within 2 days of
+  // each other = still in the paid-trial window.
+  const isInPaidTrial = (() => {
+    if (entitlement.status !== "active") return false;
+    if (!entitlement.period_end || !entitlement.trial_ends_at) return false;
+    const diffDays =
+      Math.abs(entitlement.period_end - entitlement.trial_ends_at) /
+      (1000 * 60 * 60 * 24);
+    return diffDays < 2;
+  })();
+
+  const planKey = entitlement.plan ?? "";
+  const planLabel = PLAN_LABEL[planKey] ?? "";
+  const planPrice = PRICE_BY_PLAN[planKey] ?? "";
+
+  // One human line that captures what's happening — replaces both the
+  // old "Renews X" and the duplicated trial-ends line. Mirrors Apple,
+  // Stripe Dashboard, Setapp conventions.
+  const billingLine = ((): string => {
+    if (entitlement.status === "trialing" && entitlement.trial_ends_at) {
+      return t("billing.lineTrial", {
+        date: friendlyDate(entitlement.trial_ends_at, locale),
+      });
+    }
+    if (entitlement.status === "active") {
+      if (isInPaidTrial && entitlement.period_end && planPrice) {
+        return t("billing.linePaidTrial", {
+          date: friendlyDate(entitlement.period_end, locale),
+          price: planPrice,
+        });
+      }
+      if (entitlement.period_end) {
+        return t("billing.lineActive", {
+          date: friendlyDate(entitlement.period_end, locale),
+        });
+      }
+    }
+    if (entitlement.status === "canceled" && entitlement.period_end) {
+      return t("billing.lineCanceled", {
+        date: friendlyDate(entitlement.period_end, locale),
+      });
+    }
+    if (entitlement.status === "past_due") {
+      return t("billing.linePastDue");
+    }
+    return "";
+  })();
 
   // Show the "Already a subscriber?" affordance whenever the user is
   // NOT currently active. Active users wouldn't need it (and showing
@@ -142,27 +206,30 @@ export function BillingSection() {
       <h2 className="text-xs font-semibold text-text-primary uppercase tracking-wider mb-3">
         {t("billing.sectionTitle")}
       </h2>
-      <div className="space-y-2 text-sm">
-        <div className="flex justify-between">
+      <div className="space-y-2.5 text-sm">
+        <div className="flex justify-between items-baseline">
           <span className="text-text-muted">{t("billing.status")}</span>
           <span className="text-text-primary font-medium">{statusLabel}</span>
         </div>
-        {entitlement.plan && (
-          <div className="flex justify-between">
+        {planLabel && (
+          <div className="flex justify-between items-baseline">
             <span className="text-text-muted">{t("billing.plan")}</span>
-            <span className="text-text-primary">{entitlement.plan}</span>
+            <span className="text-text-primary">
+              {planLabel}
+              {planPrice && (
+                <span className="text-text-muted ml-1.5">· {planPrice}</span>
+              )}
+            </span>
           </div>
         )}
-        {endLine && <p className="text-xs text-text-muted">{endLine}</p>}
-        {(entitlement.status === "active" ||
-          entitlement.status === "trialing") && (
-          <p className="text-xs text-text-muted">
-            {t("billing.usage", {
-              used: entitlement.usage_used,
-              limit: entitlement.usage_limit,
-            })}
+        {billingLine && (
+          <p className="text-[12.5px] text-text-secondary leading-relaxed pt-1">
+            {billingLine}
           </p>
         )}
+        {/* Per design rule: never show the per-period cap unless they
+            actually hit it. Most users won't, and exposing the number
+            invites questions ("why 100? why not more?"). */}
       </div>
 
       {error && <p className="text-xs text-accent-red mt-3">{error}</p>}
