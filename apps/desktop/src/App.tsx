@@ -173,10 +173,25 @@ function MainApp() {
   const refreshEntitlement = useConsumerStore((s) => s.refresh);
   const subscribeModal = useConsumerStore((s) => s.subscribeModal);
   const closeSubscribeModal = useConsumerStore((s) => s.closeSubscribeModal);
+  const startPostCheckoutPolling = useConsumerStore(
+    (s) => s.startPostCheckoutPolling,
+  );
 
   // Hydrate the consumer entitlement once MainApp mounts.
   useEffect(() => {
     refreshEntitlement();
+  }, [refreshEntitlement]);
+
+  // Refresh entitlement whenever the window regains focus — covers the
+  // common "user came back from Stripe Checkout in the browser" case
+  // even outside the post-checkout poll window. Cheap (one GET) and
+  // doesn't require platform branching.
+  useEffect(() => {
+    const onFocus = () => {
+      refreshEntitlement();
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, [refreshEntitlement]);
 
   // Set a random cheeky window title on mount.
@@ -243,9 +258,14 @@ function MainApp() {
           variant={subscribeModal.variant}
           onDismiss={closeSubscribeModal}
           onCheckoutOpened={() => {
-            // Leave the modal open so the user sees a "refreshing..." cue —
-            // closing happens when they return to the app and entitlement refreshes.
-            refreshEntitlement();
+            // Kick the fast poll loop: every 3s for up to 15 min, until
+            // entitlement.status flips to "active". This is the
+            // Windows-friendly activation path — the noah://subscribed
+            // deep link still wins on Mac but the loop catches anything
+            // the deep link misses (Windows warm-start, slow webhooks,
+            // etc.) within the same 15-min window the user is most
+            // likely to be paying attention.
+            startPostCheckoutPolling();
           }}
         />
       )}

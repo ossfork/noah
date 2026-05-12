@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import en from "./en.json";
 import es from "./es.json";
 import zh from "./zh.json";
+import { deviceLabel, osName } from "../lib/platform";
 
 export type Locale = "en" | "es" | "zh";
 export type LocalePreference = "auto" | Locale;
@@ -80,6 +81,10 @@ function translate(
       result = result.replace(/\{s\}/g, params.count === 1 ? "" : "s");
     }
   }
+  // Auto-inject platform tokens so copy renders correctly on each OS
+  // without callers having to thread them through every t() call.
+  result = result.replace(/\{device\}/g, deviceLabel);
+  result = result.replace(/\{osName\}/g, osName);
   return result;
 }
 

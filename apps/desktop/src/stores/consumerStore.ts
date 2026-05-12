@@ -13,10 +13,30 @@ interface ConsumerState {
   /** True once we've done the initial fetch (or given up after an error). */
   hydrated: boolean;
   subscribeModal: { variant: SubscribeModalVariant } | null;
+  /**
+   * Wall-clock ms at which the post-checkout poll loop should stop, or
+   * null when no poll is in flight. Used by tests + UI ("verifying…")
+   * to show a deterministic state during the activation window.
+   */
+  postCheckoutPollUntil: number | null;
   refresh: () => Promise<Entitlement | null>;
   setEntitlement: (e: Entitlement | null) => void;
   openSubscribeModal: (variant: SubscribeModalVariant) => void;
   closeSubscribeModal: () => void;
+  /**
+   * Start polling /entitlement every 3s until status flips to "active"
+   * or 15 minutes elapse. Idempotent — calling again while a poll is
+   * already running just extends the deadline. Returns a cancel fn so
+   * callers can stop the loop early (e.g. on unmount).
+   *
+   * This is the Windows / fallback path for "you just paid in the
+   * browser — when do we know?". On Mac the noah://subscribed deep
+   * link still wins the race; on Windows the deep link is unreliable
+   * (second-instance launches without single-instance plugin), so the
+   * poll is the activation mechanism.
+   */
+  startPostCheckoutPolling: () => () => void;
+  stopPostCheckoutPolling: () => void;
 }
 
 /**
@@ -62,10 +82,24 @@ function mergeEntitlement(
   return next;
 }
 
-export const useConsumerStore = create<ConsumerState>((set) => ({
+/** 3 seconds between polls — fast enough that activation feels instant
+ *  once the Stripe webhook lands, slow enough that 15 min of polling is
+ *  only ~300 GETs against a tiny endpoint. */
+const POLL_INTERVAL_MS = 3_000;
+/** Hard cap on poll duration. After this we stop and trust the next
+ *  natural refresh (window focus, periodic poll) to pick up activation.
+ *  15 min covers nearly every realistic Stripe webhook delivery window. */
+const POLL_MAX_MS = 15 * 60 * 1000;
+
+// Lives outside the store so React strict mode double-mounts don't
+// spawn duplicate intervals — there is only one global poll handle.
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+export const useConsumerStore = create<ConsumerState>((set, get) => ({
   entitlement: null,
   hydrated: false,
   subscribeModal: null,
+  postCheckoutPollUntil: null,
   refresh: async () => {
     try {
       const ent = await commands.consumerGetEntitlement();
@@ -83,4 +117,42 @@ export const useConsumerStore = create<ConsumerState>((set) => ({
     set((state) => ({ entitlement: mergeEntitlement(state.entitlement, e) })),
   openSubscribeModal: (variant) => set({ subscribeModal: { variant } }),
   closeSubscribeModal: () => set({ subscribeModal: null }),
+  startPostCheckoutPolling: () => {
+    const deadline = Date.now() + POLL_MAX_MS;
+    // If a poll is already in flight, just push the deadline out — no
+    // need to tear it down and rebuild.
+    if (pollTimer != null) {
+      set({ postCheckoutPollUntil: deadline });
+      return () => get().stopPostCheckoutPolling();
+    }
+    set({ postCheckoutPollUntil: deadline });
+    // Fire one refresh immediately so a fast webhook gets reflected
+    // without waiting a full tick.
+    void get().refresh();
+    pollTimer = setInterval(() => {
+      const state = get();
+      const until = state.postCheckoutPollUntil;
+      // Deadline elapsed or another call cleared the flag → stop.
+      if (until == null || Date.now() >= until) {
+        get().stopPostCheckoutPolling();
+        return;
+      }
+      // Subscription is live → done. closeSubscribeModal is left to the
+      // caller (the modal watches entitlement and shows the success
+      // state); we just stop the loop.
+      if (state.entitlement?.status === "active") {
+        get().stopPostCheckoutPolling();
+        return;
+      }
+      void get().refresh();
+    }, POLL_INTERVAL_MS);
+    return () => get().stopPostCheckoutPolling();
+  },
+  stopPostCheckoutPolling: () => {
+    if (pollTimer != null) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+    set({ postCheckoutPollUntil: null });
+  },
 }));

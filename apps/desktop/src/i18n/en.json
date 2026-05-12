@@ -109,9 +109,9 @@
     "errorVerifyFailed": "Couldn't verify the link"
   },
   "subscribe": {
-    "firstFixHeadline": "Keep Noah on your Mac",
+    "firstFixHeadline": "Keep Noah on your {device}",
     "firstFixBody": "Pick a plan and Noah keeps fixing problems for you. No charge today.",
-    "secondIssueHeadline": "Keep Noah on your Mac",
+    "secondIssueHeadline": "Keep Noah on your {device}",
     "secondIssueBody": "Pick a plan and Noah keeps fixing problems for you. No charge until {date}.",
     "paywallHeadline": "Welcome back",
     "paywallBody": "Pick up where you left off. $4.99/mo or $50/yr — cancel any time.",
@@ -121,6 +121,7 @@
     "trustPill": "7-day trial · no card",
     "planAriaLabel": "Choose a plan",
     "footnote": "$0 today · cancel any time · we'll never charge during your trial.",
+    "alreadyPaidNote": "Already subscribed? Your account will update in a few minutes.",
     "plan": {
       "annual": {
         "label": "Annual",
@@ -207,7 +208,7 @@
   },
   "onboarding": {
     "eyebrow": "Get started",
-    "greeting": "Hi, I'm Noah. What's going on with your Mac?",
+    "greeting": "Hi, I'm Noah. What's going on with your {device}?",
     "subgreeting": "Pick the closest match — you can tell me more in a moment.",
     "backLabel": "Back",
     "continue": "Continue",
@@ -215,7 +216,7 @@
     "signinContext": "Signing in to help with: {category}",
     "tile": {
       "slow": {
-        "title": "My Mac feels slow",
+        "title": "My {device} feels slow",
         "desc": "Freezes, stutters, or sluggishness",
         "hint": "e.g. Safari freezes for 10 seconds every time I open a new tab — started yesterday"
       },
@@ -241,13 +242,13 @@
       },
       "update": {
         "title": "Something's weird after an update",
-        "desc": "A new bug after macOS or an app updated",
-        "hint": "e.g. after the latest macOS update my external display stopped working"
+        "desc": "A new bug after {osName} or an app updated",
+        "hint": "e.g. after the latest {osName} update my external display stopped working"
       },
       "setup": {
         "title": "Help me set something up",
         "desc": "Email, iCloud, backups, accounts",
-        "hint": "e.g. I want to set up Time Machine backups to a new external drive"
+        "hint": "e.g. I want to set up backups to a new external drive"
       },
       "other": {
         "title": "Something else",

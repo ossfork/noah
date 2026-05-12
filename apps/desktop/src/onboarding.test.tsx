@@ -77,7 +77,13 @@ vi.mock("@tauri-apps/api/window", () => ({
     setTitle: vi.fn().mockResolvedValue(undefined),
   })),
 }));
-vi.mock("./lib/platform", () => ({ isMac: true }));
+vi.mock("./lib/platform", () => ({
+  isMac: true,
+  isWindows: false,
+  isLinux: false,
+  deviceLabel: "Mac",
+  osName: "macOS",
+}));
 
 // Stub MainApp-internal components — App.tsx renders these after the gate,
 // and we don't care what's inside; we only care that we *left* the

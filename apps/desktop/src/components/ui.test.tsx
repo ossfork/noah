@@ -116,7 +116,13 @@ beforeEach(() => {
 // MainTitleBar renders null on non-macOS (jsdom's navigator.platform is "").
 // We mock isMac = true so we can test the macOS title bar behaviour here.
 
-vi.mock("../lib/platform", () => ({ isMac: true }));
+vi.mock("../lib/platform", () => ({
+  isMac: true,
+  isWindows: false,
+  isLinux: false,
+  deviceLabel: "Mac",
+  osName: "macOS",
+}));
 
 describe("MainTitleBar", () => {
   it("renders sidebar toggle", () => {

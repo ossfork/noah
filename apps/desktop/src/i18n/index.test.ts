@@ -1,8 +1,15 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 function setNavigatorLanguage(value: string) {
   Object.defineProperty(window.navigator, "language", {
+    configurable: true,
+    value,
+  });
+}
+
+function setNavigatorPlatform(value: string) {
+  Object.defineProperty(window.navigator, "platform", {
     configurable: true,
     value,
   });
@@ -50,5 +57,33 @@ describe("i18n locale resolution", () => {
       "es",
       "zh",
     ]);
+  });
+});
+
+describe("i18n platform token substitution", () => {
+  afterEach(() => {
+    // Restore the test-setup default so other test files aren't surprised.
+    setNavigatorPlatform("MacIntel");
+  });
+
+  it("substitutes {device} as 'Mac' on macOS", async () => {
+    setNavigatorPlatform("MacIntel");
+    const i18n = await loadI18n();
+    expect(i18n.t("onboarding.greeting")).toBe(
+      "Hi, I'm Noah. What's going on with your Mac?",
+    );
+    expect(i18n.t("onboarding.tile.slow.title")).toBe("My Mac feels slow");
+  });
+
+  it("substitutes {device} as 'PC' and {osName} as 'Windows' on Windows", async () => {
+    setNavigatorPlatform("Win32");
+    const i18n = await loadI18n();
+    expect(i18n.t("onboarding.greeting")).toBe(
+      "Hi, I'm Noah. What's going on with your PC?",
+    );
+    expect(i18n.t("onboarding.tile.slow.title")).toBe("My PC feels slow");
+    expect(i18n.t("onboarding.tile.update.desc")).toBe(
+      "A new bug after Windows or an app updated",
+    );
   });
 });

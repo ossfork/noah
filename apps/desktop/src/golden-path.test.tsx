@@ -79,7 +79,13 @@ vi.mock("@tauri-apps/api/window", () => ({
     setTitle: vi.fn().mockResolvedValue(undefined),
   })),
 }));
-vi.mock("./lib/platform", () => ({ isMac: true }));
+vi.mock("./lib/platform", () => ({
+  isMac: true,
+  isWindows: false,
+  isLinux: false,
+  deviceLabel: "Mac",
+  osName: "macOS",
+}));
 
 // ── Full tauri-commands mock surface ──
 // The real ChatPanel + SubscribeModal pull in a wider slice of commands than

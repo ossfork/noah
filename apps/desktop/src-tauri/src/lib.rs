@@ -196,6 +196,20 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
+            // Cold-start deep link on Windows/Linux: when the OS launches
+            // Noah by opening a noah:// URL, the URL arrives as argv[1].
+            // The plugin's `onOpenUrl` event isn't emitted until we hand
+            // argv to handle_cli_arguments — without this, a magic-link
+            // click that launches Noah leaves the user stuck on the
+            // tile-picker because the frontend's getCurrent() returns
+            // empty. No-op on macOS (the plugin handles cold-start via
+            // NSAppleEventManager on its own).
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                app.deep_link().handle_cli_arguments(std::env::args());
+            }
+
             // Native menu bar — macOS only.
             // On Linux/Windows the WM provides window controls and the menu bar
             // just wastes vertical space with macOS-specific items (Services, Hide, etc.).

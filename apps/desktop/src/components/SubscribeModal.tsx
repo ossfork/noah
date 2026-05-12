@@ -37,6 +37,16 @@ export function SubscribeModal({
   const { t } = useLocale();
   const ent = useConsumerStore((s) => s.entitlement);
   const setEntitlement = useConsumerStore((s) => s.setEntitlement);
+  // Truthy only when the user has clicked Subscribe within the last 15
+  // minutes and the post-checkout poll loop hasn't yet seen status
+  // flip to "active". Drives the quiet reassurance footnote — we
+  // *don't* surface this as a progress bar or "verifying…" spinner
+  // because that broadcasts internal state and raises anxiety. The
+  // line only shows for users who'd be wondering "did my payment
+  // register?", and stays silent for everyone else.
+  const isPostCheckoutPolling = useConsumerStore(
+    (s) => s.postCheckoutPollUntil != null,
+  );
   const [plan, setPlan] = useState<Plan>("annual");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -236,9 +246,15 @@ export function SubscribeModal({
           </button>
           {/* Trust footnote — lives BELOW the CTA, not above it. The
               user has already seen the headline and the price; this
-              is just reassurance, not the lead. */}
+              is just reassurance, not the lead.
+              When the user has just opened checkout (poll loop active),
+              the line quietly swaps to a "you might already be paid"
+              reassurance so a returning-from-browser user doesn't feel
+              like the app forgot they paid. */}
           <p className="mt-2.5 text-[11.5px] text-text-muted text-center">
-            {t("subscribe.footnote")}
+            {isPostCheckoutPolling
+              ? t("subscribe.alreadyPaidNote")
+              : t("subscribe.footnote")}
           </p>
 
           {/* Dismiss area: always shows a "Keep my free trial" link.
