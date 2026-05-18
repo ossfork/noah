@@ -103,14 +103,23 @@ export function SubscribeModal({
     }
   }, [email, setEntitlement]);
 
-  const headline =
+  // i18n strings carry a {device} placeholder ("Keep Noah on your {device}")
+  // so the same key works on Mac and Windows builds. Substitute here based
+  // on the current platform — `navigator.userAgent` is reliable inside a
+  // Tauri webview because Tauri preserves the host platform's UA string.
+  const device = typeof navigator !== "undefined" && /Windows/i.test(navigator.userAgent || "")
+    ? "PC"
+    : "Mac";
+  const fillDevice = (s: string) => s.replace(/\{device\}/g, device);
+  const headline = fillDevice(
     variant === "first_fix"
       ? t("subscribe.firstFixHeadline")
       : variant === "second_issue"
         ? t("subscribe.secondIssueHeadline")
         : variant === "cap_hit"
           ? t("subscribe.capHitHeadline")
-          : t("subscribe.paywallHeadline");
+          : t("subscribe.paywallHeadline")
+  );
 
   const dateLabel = formatTrialEndDate(
     ent?.trial_ends_at ?? null,

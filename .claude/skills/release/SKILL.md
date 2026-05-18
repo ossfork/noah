@@ -42,15 +42,27 @@ Push the commit before building (CI needs the latest code).
 
 ## Build and upload (Mac — local)
 
-Set signing keys and run the release script directly:
+Two key families are required:
+- **Tauri updater key** (`TAURI_SIGNING_PRIVATE_KEY`) — signs the updater manifest so existing installs can auto-update
+- **Apple Developer ID** (`APPLE_*`) — code-signs and notarizes the .dmg/.app so Gatekeeper accepts it on first launch
 
 ```bash
+# Updater signing
 export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/noah.key)"
 export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="searchformeaning"
+
+# Apple code signing + notarization (required for a Gatekeeper-clean dmg)
+export APPLE_SIGNING_IDENTITY="Developer ID Application: You Xu (2VGY8SHNYJ)"
+export APPLE_ID="xu.leaps@gmail.com"
+export APPLE_PASSWORD="<app-specific password from appleid.apple.com>"
+export APPLE_TEAM_ID="2VGY8SHNYJ"
+
 node scripts/release.mjs --upload --skip-install
 ```
 
-This builds a **universal macOS binary** (ARM + Intel via `--target universal-apple-darwin`), signs, notarizes, and uploads the `.dmg` + `.tar.gz` (with updater signature) to GitHub Releases. The `latest.json` registers both `darwin-aarch64` and `darwin-x86_64` for the updater.
+The `APPLE_*` vars are typically already set in the shell (.zshenv). If you see `==> APPLE_SIGNING_IDENTITY not set` or `==> APPLE_ID/APPLE_PASSWORD/APPLE_TEAM_ID not set` in the script's output, the build will succeed but the resulting .dmg will be unsigned — **abort and export the missing vars before re-running**, otherwise users hit Gatekeeper warnings.
+
+This builds a **universal macOS binary** (ARM + Intel via `--target universal-apple-darwin`), signs with the Apple Developer ID, submits to Apple for notarization, staples the ticket, and uploads the `.dmg` + `.tar.gz` (with updater signature) to GitHub Releases. The `latest.json` registers both `darwin-aarch64` and `darwin-x86_64` for the updater.
 
 The release script automatically:
 - Installs `x86_64-apple-darwin` Rust target if missing
