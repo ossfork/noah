@@ -4,11 +4,11 @@ import {
   AlertTriangle,
   ArrowLeft,
   BatteryLow,
-  Cable,
+  Cloud,
   Gauge,
+  HardDrive,
   MessageCircle,
-  RefreshCcw,
-  Settings2,
+  Mic,
   Wifi,
 } from "lucide-react";
 import { NoahIcon } from "./NoahIcon";
@@ -27,15 +27,19 @@ interface Tile {
   hintKey: string;
 }
 
+// Tiles tuned for the ICP: knowledge worker whose Mac/PC is their primary
+// income tool. Each is a workday-breaker that Noah's actual tool set can
+// diagnose + fix. Matches the website's eight tiles 1:1 (see
+// onnoah.app/public/previews.jsx ISSUES) — keep them in sync.
 const TILES: readonly Tile[] = [
-  { id: "slow", Icon: Gauge, titleKey: "onboarding.tile.slow.title", descKey: "onboarding.tile.slow.desc", hintKey: "onboarding.tile.slow.hint" },
-  { id: "wifi", Icon: Wifi, titleKey: "onboarding.tile.wifi.title", descKey: "onboarding.tile.wifi.desc", hintKey: "onboarding.tile.wifi.hint" },
-  { id: "crash", Icon: AlertTriangle, titleKey: "onboarding.tile.crash.title", descKey: "onboarding.tile.crash.desc", hintKey: "onboarding.tile.crash.hint" },
-  { id: "connect", Icon: Cable, titleKey: "onboarding.tile.connect.title", descKey: "onboarding.tile.connect.desc", hintKey: "onboarding.tile.connect.hint" },
-  { id: "battery", Icon: BatteryLow, titleKey: "onboarding.tile.battery.title", descKey: "onboarding.tile.battery.desc", hintKey: "onboarding.tile.battery.hint" },
-  { id: "update", Icon: RefreshCcw, titleKey: "onboarding.tile.update.title", descKey: "onboarding.tile.update.desc", hintKey: "onboarding.tile.update.hint" },
-  { id: "setup", Icon: Settings2, titleKey: "onboarding.tile.setup.title", descKey: "onboarding.tile.setup.desc", hintKey: "onboarding.tile.setup.hint" },
-  { id: "other", Icon: MessageCircle, titleKey: "onboarding.tile.other.title", descKey: "onboarding.tile.other.desc", hintKey: "onboarding.tile.other.hint" },
+  { id: "slow",    Icon: Gauge,         titleKey: "onboarding.tile.slow.title",    descKey: "onboarding.tile.slow.desc",    hintKey: "onboarding.tile.slow.hint" },
+  { id: "wifi",    Icon: Wifi,          titleKey: "onboarding.tile.wifi.title",    descKey: "onboarding.tile.wifi.desc",    hintKey: "onboarding.tile.wifi.hint" },
+  { id: "crash",   Icon: AlertTriangle, titleKey: "onboarding.tile.crash.title",   descKey: "onboarding.tile.crash.desc",   hintKey: "onboarding.tile.crash.hint" },
+  { id: "storage", Icon: HardDrive,     titleKey: "onboarding.tile.storage.title", descKey: "onboarding.tile.storage.desc", hintKey: "onboarding.tile.storage.hint" },
+  { id: "battery", Icon: BatteryLow,    titleKey: "onboarding.tile.battery.title", descKey: "onboarding.tile.battery.desc", hintKey: "onboarding.tile.battery.hint" },
+  { id: "av",      Icon: Mic,           titleKey: "onboarding.tile.av.title",      descKey: "onboarding.tile.av.desc",      hintKey: "onboarding.tile.av.hint" },
+  { id: "sync",    Icon: Cloud,         titleKey: "onboarding.tile.sync.title",    descKey: "onboarding.tile.sync.desc",    hintKey: "onboarding.tile.sync.hint" },
+  { id: "other",   Icon: MessageCircle, titleKey: "onboarding.tile.other.title",   descKey: "onboarding.tile.other.desc",   hintKey: "onboarding.tile.other.hint" },
 ];
 
 type Stage =

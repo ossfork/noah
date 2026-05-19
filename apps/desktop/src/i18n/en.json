@@ -37,23 +37,23 @@
   "welcome": {
     "greeting": "Hey, I'm Noah",
     "subtitleContextual": "What's going on? Or check in on something I know about.",
-    "subtitleDefault": "Your computer helper. What's going on?",
+    "subtitleDefault": "What's going on with your {device}?",
     "directive": {
       "line1": "Tell me what's wrong.",
       "line2": "I'll handle the rest."
     },
     "learnGreeting": "What would you like me to learn?",
-    "learnSubtitle": "Share a link to a tutorial or guide, or just tell me in your own words."
+    "learnSubtitle": "Paste a link or just tell me in your words."
   },
   "suggestions": {
-    "internetSlow": "My internet is slow",
+    "internetSlow": "Wi-Fi keeps dropping",
     "internetSlowDesc": "Diagnose network issues",
-    "sluggish": "My computer feels sluggish",
-    "sluggishDesc": "Check performance",
-    "crashing": "A program keeps crashing",
+    "sluggish": "My {device} feels slow",
+    "sluggishDesc": "Find what's hogging it",
+    "crashing": "An app keeps crashing",
     "crashingDesc": "Find the cause",
-    "printer": "Set up my printer",
-    "printerDesc": "Fix printing problems"
+    "storage": "Storage almost full",
+    "storageDesc": "Find what's eating space"
   },
   "sidebar": {
     "newChat": "New chat",
@@ -225,28 +225,28 @@
       },
       "crash": {
         "title": "An app keeps crashing",
-        "desc": "Quits, beach balls, or won't open",
+        "desc": "Quits, freezes, won't open",
         "hint": "e.g. Zoom crashes about 5 minutes into every call"
       },
-      "connect": {
-        "title": "Can't print or connect a device",
-        "desc": "Printer, monitor, Bluetooth, USB",
-        "hint": "e.g. my Brother printer shows offline but it's been working for years"
+      "storage": {
+        "title": "Storage almost full",
+        "desc": "Can't save, downloads piling up",
+        "hint": "e.g. {osName} says my disk is almost full and I don't know what to delete"
       },
       "battery": {
         "title": "Battery drains fast",
-        "desc": "Short runtime or overheating",
+        "desc": "Dies mid-meeting, runs hot",
         "hint": "e.g. I used to get 8 hours, now I'm lucky to get 3"
       },
-      "update": {
-        "title": "Something's weird after an update",
-        "desc": "A new bug after {osName} or an app updated",
-        "hint": "e.g. after the latest {osName} update my external display stopped working"
+      "av": {
+        "title": "Mic, camera, or audio",
+        "desc": "Won't work in Zoom or Teams",
+        "hint": "e.g. my mic stopped working in Zoom but other apps hear it fine"
       },
-      "setup": {
-        "title": "Help me set something up",
-        "desc": "Email, iCloud, backups, accounts",
-        "hint": "e.g. I want to set up backups to a new external drive"
+      "sync": {
+        "title": "Files won't sync",
+        "desc": "iCloud, Dropbox, OneDrive stuck",
+        "hint": "e.g. a file I saved on my other device isn't showing up here"
       },
       "other": {
         "title": "Something else",
@@ -256,20 +256,14 @@
     }
   },
   "setup.taglines": [
-    "Your personal IT help desk — describe a problem, get it fixed.",
-    "AI-powered computer repair, right on your desktop.",
-    "Describe your problem. Noah fixes it.",
-    "Like having a tech-savvy friend who actually picks up the phone.",
-    "Computer acting up? Tell Noah what's wrong.",
-    "No hold music. No ticket numbers. Just fixes.",
-    "Tech support that doesn't ask you to restart first.",
-    "Your computer problems, solved in plain English.",
-    "The IT guy who never sighs at your question.",
-    "Tell Noah what's broken. Go grab a coffee.",
-    "Finally, tech support that doesn't judge you.",
-    "Fixes your computer. Doesn't judge your browser tabs.",
-    "Like IT support, but without the attitude.",
-    "Help is here. No jargon required."
+    "Find the cause. See the plan. Approve the fix.",
+    "Fixed before your next meeting.",
+    "$50 a year. About one billed hour.",
+    "Describe the problem. Noah names the cause.",
+    "Plain-English diagnosis. One-tap fix.",
+    "Every change logged. Every change undoable.",
+    "Doesn't judge your browser tabs.",
+    "No tickets, no hold music. Just a fix."
   ],
   "settings": {
     "title": "Settings",

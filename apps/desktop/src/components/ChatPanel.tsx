@@ -1577,7 +1577,7 @@ const SUGGESTION_KEYS = [
   { icon: "\uD83C\uDF10", labelKey: "suggestions.internetSlow", descKey: "suggestions.internetSlowDesc" },
   { icon: "\uD83D\uDC22", labelKey: "suggestions.sluggish", descKey: "suggestions.sluggishDesc" },
   { icon: "\uD83D\uDCA5", labelKey: "suggestions.crashing", descKey: "suggestions.crashingDesc" },
-  { icon: "\uD83D\uDDA8\uFE0F", labelKey: "suggestions.printer", descKey: "suggestions.printerDesc" },
+  { icon: "\uD83D\uDCBE", labelKey: "suggestions.storage", descKey: "suggestions.storageDesc" },
 ];
 
 function SuggestionCards({
