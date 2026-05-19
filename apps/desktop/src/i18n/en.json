@@ -211,6 +211,8 @@
     "subgreeting": "Pick the closest match — you can tell me more in a moment.",
     "backLabel": "Back",
     "continue": "Continue",
+    "diagnoseNow": "Diagnose now",
+    "clarifierOptional": "Optional — Noah already knows you picked this. Add detail only if it helps.",
     "alreadyHaveAccount": "Already have an account? Sign in",
     "signinContext": "Signing in to help with: {category}",
     "tile": {

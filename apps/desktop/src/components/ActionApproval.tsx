@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useSessionStore } from "../stores/sessionStore";
 import { useChatStore } from "../stores/chatStore";
@@ -13,12 +13,25 @@ export function ActionApproval() {
   const autoConfirm = useSessionStore((s) => s.autoConfirm);
   const setAutoConfirm = useSessionStore((s) => s.setAutoConfirm);
   const addMessage = useChatStore((s) => s.addMessage);
+  // Tracks approval_ids we've already emitted a system message for, so
+  // a duplicate event from the backend OR an autoConfirm/manual-click
+  // race condition can't print "Approved: X" twice in the chat. Resets
+  // never — approval_ids are server-issued UUID-shaped so collisions
+  // across a session lifetime are not a concern.
+  const handledApprovalIds = useRef<Set<string>>(new Set());
 
   // Listen for approval requests from the Tauri backend
   useEffect(() => {
     const unlisten = listen<ApprovalRequest>(
       "approval-request",
       (event) => {
+        // Drop duplicate emissions of the same approval_id outright —
+        // covers the case where the backend retries firing the event
+        // after a transient state hiccup. The user already saw and
+        // (presumably) responded to the first one.
+        if (handledApprovalIds.current.has(event.payload.approval_id)) {
+          return;
+        }
         setPendingApproval(event.payload);
       },
     );
@@ -30,6 +43,14 @@ export function ActionApproval() {
 
   const handleApprove = useCallback(async (dontAskAgain?: boolean) => {
     if (!pendingApproval) return;
+    // Idempotency guard. If something fires handleApprove twice for the
+    // same approval (StrictMode double-render, autoConfirm useEffect
+    // racing with a manual click, etc.) we want exactly one chat row.
+    if (handledApprovalIds.current.has(pendingApproval.approval_id)) {
+      setPendingApproval(null);
+      return;
+    }
+    handledApprovalIds.current.add(pendingApproval.approval_id);
     if (dontAskAgain) {
       setAutoConfirm(true);
     }
@@ -48,6 +69,11 @@ export function ActionApproval() {
 
   const handleDeny = useCallback(async () => {
     if (!pendingApproval) return;
+    if (handledApprovalIds.current.has(pendingApproval.approval_id)) {
+      setPendingApproval(null);
+      return;
+    }
+    handledApprovalIds.current.add(pendingApproval.approval_id);
     try {
       await commands.denyAction(pendingApproval.approval_id);
       addMessage({

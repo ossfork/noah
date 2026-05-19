@@ -265,7 +265,10 @@ function ClarifyStage({
   onContinue: (text: string) => void;
 }) {
   const { t } = useLocale();
-  const canContinue = value.trim().length > 0;
+  // The clarifier is OPTIONAL — picking a tile is already a complete
+  // statement of intent. The button label reflects whether the user
+  // added detail: "Continue" with text, "Diagnose now" without.
+  const hasDetail = value.trim().length > 0;
   const { Icon } = tile;
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-bg-primary px-6 py-10">
@@ -300,7 +303,7 @@ function ClarifyStage({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && canContinue) {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
               onContinue(value.trim());
             }
@@ -309,6 +312,9 @@ function ClarifyStage({
           rows={4}
           className="w-full px-4 py-3 rounded-xl bg-bg-input border border-border-primary text-base text-text-primary placeholder-text-muted outline-none focus:border-border-focus transition-colors resize-none"
         />
+        <p className="mt-2 text-[11.5px] text-text-muted">
+          {t("onboarding.clarifierOptional")}
+        </p>
 
         <div className="mt-4 flex gap-2">
           <button
@@ -319,10 +325,9 @@ function ClarifyStage({
           </button>
           <button
             onClick={() => onContinue(value.trim())}
-            disabled={!canContinue}
-            className="btn-launch flex-1 py-2 rounded-xl text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
+            className="btn-launch flex-1 py-2 rounded-xl text-sm font-medium cursor-pointer"
           >
-            {t("onboarding.continue")}
+            {hasDetail ? t("onboarding.continue") : t("onboarding.diagnoseNow")}
           </button>
         </div>
       </div>
