@@ -1027,7 +1027,11 @@ function DoneCard({
     // to surface here.
     if (value) {
       try {
-        const result = await commands.consumerNotifyFixCompleted();
+        // Forward the result-card summary so the server can log
+        // what was actually fixed (paired with the issue text from
+        // /events/issue-started). Pure instrumentation — caller
+        // doesn't need to react to it.
+        const result = await commands.consumerNotifyFixCompleted(summary);
         if (result) {
           useConsumerStore.getState().setEntitlement(result.entitlement);
         }

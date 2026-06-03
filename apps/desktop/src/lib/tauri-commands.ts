@@ -556,6 +556,7 @@ export async function consumerGetEntitlement(): Promise<Entitlement | null> {
 }
 
 export async function consumerNotifyIssueStarted(
+  issueText?: string,
   tzOffsetMinutes?: number,
 ): Promise<Entitlement | null> {
   return await invoke<Entitlement | null>("consumer_notify_issue_started", {
@@ -563,6 +564,7 @@ export async function consumerNotifyIssueStarted(
       typeof tzOffsetMinutes === "number"
         ? tzOffsetMinutes
         : new Date().getTimezoneOffset(),
+    issueText: issueText && issueText.trim() ? issueText.trim() : null,
   });
 }
 
@@ -577,8 +579,12 @@ export async function consumerTrialLinkEmail(email: string): Promise<void> {
   await invoke<void>("consumer_trial_link_email", { email });
 }
 
-export async function consumerNotifyFixCompleted(): Promise<FixCompletedResult | null> {
-  return await invoke<FixCompletedResult | null>("consumer_notify_fix_completed");
+export async function consumerNotifyFixCompleted(
+  summary?: string,
+): Promise<FixCompletedResult | null> {
+  return await invoke<FixCompletedResult | null>("consumer_notify_fix_completed", {
+    summary: summary && summary.trim() ? summary.trim() : null,
+  });
 }
 
 export async function consumerBillingCheckoutUrl(plan: "monthly" | "annual"): Promise<string> {

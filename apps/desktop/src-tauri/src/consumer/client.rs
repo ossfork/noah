@@ -127,10 +127,19 @@ pub async fn fetch_entitlement(auth: &Auth<'_>) -> Result<Entitlement> {
 pub async fn notify_issue_started(
     auth: &Auth<'_>,
     tz_offset_minutes: Option<i32>,
+    issue_text: Option<&str>,
 ) -> Result<Entitlement> {
+    // Server caps body at 1000 chars; trim here too so we don't ship a
+    // pointless 50KB JSON body for chatty pastes.
+    let trimmed_issue: Option<String> = issue_text
+        .map(|s| s.trim().chars().take(1000).collect::<String>())
+        .filter(|s| !s.is_empty());
     let req = client()
         .post(format!("{}/events/issue-started", base_url()))
-        .json(&serde_json::json!({ "tz_offset_minutes": tz_offset_minutes }));
+        .json(&serde_json::json!({
+            "tz_offset_minutes": tz_offset_minutes,
+            "issue_text": trimmed_issue,
+        }));
     let resp = apply_auth(req, auth).send().await?;
     if !resp.status().is_success() {
         return Err(anyhow!("issue-started failed: {}", resp.status()));
@@ -155,8 +164,16 @@ pub async fn trial_link_email(auth: &Auth<'_>, email: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn notify_fix_completed(auth: &Auth<'_>) -> Result<FixCompletedResponse> {
-    let req = client().post(format!("{}/events/fix-completed", base_url()));
+pub async fn notify_fix_completed(
+    auth: &Auth<'_>,
+    summary: Option<&str>,
+) -> Result<FixCompletedResponse> {
+    let trimmed_summary: Option<String> = summary
+        .map(|s| s.trim().chars().take(1000).collect::<String>())
+        .filter(|s| !s.is_empty());
+    let req = client()
+        .post(format!("{}/events/fix-completed", base_url()))
+        .json(&serde_json::json!({ "summary": trimmed_summary }));
     let resp = apply_auth(req, auth).send().await?;
     if !resp.status().is_success() {
         return Err(anyhow!("fix-completed failed: {}", resp.status()));

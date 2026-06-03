@@ -154,7 +154,10 @@ export function useAgent(): UseAgentReturn {
       }
       if (!ent || ent.status === "none") {
         try {
-          const started = await commands.consumerNotifyIssueStarted();
+          // Forward the user's message text so the server can log
+          // what people are actually asking Noah to fix. Capped to
+          // 1000 chars on both sides; null if empty.
+          const started = await commands.consumerNotifyIssueStarted(trimmed);
           if (started) consumer.setEntitlement(started);
         } catch {
           // non-fatal — trial start is best-effort; server is authoritative
