@@ -132,13 +132,12 @@ pub async fn consumer_get_entitlement(
 pub async fn consumer_notify_issue_started(
     state: State<'_, AppState>,
     tz_offset_minutes: Option<i32>,
-    issue_text: Option<String>,
 ) -> Result<Option<client::Entitlement>, String> {
     let (session_tok, device_id) = current_auth(&state.app_dir);
     let Some(auth) = auth_ref(&session_tok, &device_id) else {
         return Ok(None);
     };
-    let ent = client::notify_issue_started(&auth, tz_offset_minutes, issue_text.as_deref())
+    let ent = client::notify_issue_started(&auth, tz_offset_minutes)
         .await
         .map_err(|e| e.to_string())?;
     let _ = entitlement::save_cached(&state.app_dir, &ent);
@@ -171,13 +170,12 @@ pub async fn consumer_trial_link_email(
 #[tauri::command]
 pub async fn consumer_notify_fix_completed(
     state: State<'_, AppState>,
-    summary: Option<String>,
 ) -> Result<Option<client::FixCompletedResponse>, String> {
     let (session_tok, device_id) = current_auth(&state.app_dir);
     let Some(auth) = auth_ref(&session_tok, &device_id) else {
         return Ok(None);
     };
-    let result = client::notify_fix_completed(&auth, summary.as_deref())
+    let result = client::notify_fix_completed(&auth)
         .await
         .map_err(|e| e.to_string())?;
     let _ = entitlement::save_cached(&state.app_dir, &result.entitlement);
