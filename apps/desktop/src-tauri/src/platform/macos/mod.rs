@@ -32,6 +32,7 @@ pub fn register_tools(router: &mut ToolRouter, db_path: Option<&Path>) {
     router.register(Box::new(performance::MacDiskUsage));
     router.register(Box::new(performance::MacKillProcess));
     router.register(Box::new(performance::MacClearCaches));
+    router.register(Box::new(performance::MacPerformanceDiagnose));
 
     // App tools
     router.register(Box::new(apps::MacAppList));

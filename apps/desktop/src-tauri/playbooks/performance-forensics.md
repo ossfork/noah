@@ -26,50 +26,54 @@ say *specifically* what and why, then **verify after** they confirm — never
 leave the session dangling on a `WAIT_FOR_USER` with no follow-up.
 
 ## Quick check
-Run `mac_system_info` and `mac_process_list` together. Classify into exactly
-one of four diagnoses: **runaway process**, **memory pressure**, **disk full**,
-or **nothing obvious → restart**.
+Run **`mac_performance_diagnose`** — one call returns the `primary` cause
+(memory / cpu / disk / thermal / healthy), the raw signals, RAM/swap/disk/
+uptime, and the top memory + CPU processes (each flagged `system: true` if it's
+protected). Use its `primary` to pick the path below. Don't fan out
+`mac_system_info` + `mac_process_list` + `mac_disk_usage` separately — the
+diagnose tool already gathered all of it in one pass.
 
 ## The diagnoses (try in order)
 
-### D1 — Runaway process (most common)
-One app pinning the CPU. Look at top CPU consumers in `mac_process_list`.
-- If one app is using >100% CPU and it isn't a protected system process (see
-  Caveats) → offer to force-quit it with `mac_kill_process`.
-- **Close the loop:** after quitting, re-run `mac_process_list`, confirm CPU
-  dropped, and report it in a `ui_done` ("Quit Acrobat — CPU back to normal,
-  your Mac should feel responsive now").
+### D1 — `primary: cpu` — Runaway process (most common single cause)
+The diagnose tool's top `top_cpu` entry is pinning the CPU.
+- Offer to force-quit it with `mac_kill_process` (it isn't a `system: true`
+  process — the tool already excluded those).
+- **Close the loop:** re-run `mac_performance_diagnose`, confirm CPU dropped,
+  report it in a `ui_done`.
 
-### D2 — Memory pressure (the dangling-loop trap — do NOT hand off)
-From `mac_system_info` / `vm_stat`, check swap and pressure.
-- **Swap > 2 GB or memory pressure warn/critical** → real pressure. Identify
-  the top memory consumers from `mac_process_list`.
-- **Noah quits them itself** (with one approval), naming each app:
-  "Firefox is using 2.3 GB across its tabs and TextNow another 760 MB —
-  I'll quit both to free ~3 GB. OK?" → quit via `mac_kill_process`.
-- Then **relieve and verify**: run `shell_run` `sudo purge` to reclaim inactive
-  memory, re-check `vm_stat`, and report the freed amount in a `ui_done`.
+### D2 — `primary: memory` — Memory pressure (the dangling-loop trap)
+`signals.memory_pressure` is true (swap in use). Read `top_memory` for the hogs.
+- **Noah quits them itself** (one approval), naming each from `top_memory`:
+  "Firefox is using 2.3 GB and TextNow another 760 MB — I'll quit both to free
+  ~3 GB. OK?" → quit via `mac_kill_process`.
+- **Safe-quit rule:** ALWAYS use `mac_kill_process` (graceful SIGTERM, signal
+  15) so the app saves its session/tabs. **Never** `shell_run` a `kill -9` /
+  `killall -9` on a user's app — SIGKILL loses unsaved work.
+- Then **relieve and verify**: `shell_run` `sudo purge`, re-run
+  `mac_performance_diagnose`, report freed memory in a `ui_done`.
 - **Never** end on "close some tabs yourself." If a browser must stay open,
-  quit the *other* memory hogs and still verify.
-- **Normal, not a problem:** high *Compressed Memory* (macOS compressing
-  inactive pages — good) and high *Cached Files* (free RAM used for caching —
-  beneficial). Don't alarm the user about these.
+  quit the *other* hogs and still verify.
+- **Normal, not a problem:** high *Compressed Memory* and *Cached Files* are
+  healthy macOS behavior — don't alarm the user about them.
 
-### D3 — Disk full
-From `mac_disk_usage`, check free space.
-- **Boot disk > 90% full** → a near-full SSD causes severe slowdowns. Activate
-  the `disk-space-recovery` playbook and let it close that loop.
+### D3 — `primary: disk` — Disk full
+`signals.disk_full` true (boot volume ≥ 90%). A near-full SSD slows everything
+— activate `disk-space-recovery` and let it close that loop.
 
-### Restart — when nothing else stands out
-If the Mac hasn't restarted in > 7 days (uptime from `mac_system_info`):
-- macOS accumulates swap, caches, file descriptors, and leaked memory that a
-  restart clears. It's the most underrated fix for "mystery slowness."
-- Offer it plainly and let the user choose — a restart is theirs to trigger,
-  but frame it as the recommended next step, not a shrug.
+### Restart / thermal — when nothing else stands out
+- `uptime_days > 7` → recommend a restart (clears accumulated swap, caches,
+  leaked memory — the most underrated fix). The user triggers it; frame it as
+  the recommended next step.
+- `primary: thermal` (`kernel_task` holding CPU) → the Mac is hot and throttling
+  itself. Fix is physical: improve ventilation, don't use on a soft surface.
 
-> D1–D3 + restart resolve ~80% of performance complaints. After diagnosis,
-> if the Mac is merely "a bit sluggish" rather than pinned by one cause, offer
-> the **`mac-tune-up`** playbook — a safe maintenance sweep.
+> Resolves ~80% of performance complaints. **Durable advice (don't skip):** for
+> the common case — an 8 GB Mac with many browser tabs — quitting apps is only a
+> band-aid; it recurs. Tell the user plainly and give prevention: keep tabs
+> modest, restart weekly, and offer the **`mac-tune-up`** sweep. If they want it
+> hands-off, mention Noah can run a scheduled cleanup so it doesn't keep coming
+> back.
 
 ## Caveats — DO NOT kill these (they look suspicious but are normal)
 - **`kernel_task`** — thermal throttling. High CPU = the Mac is hot and
@@ -96,18 +100,17 @@ If the Mac hasn't restarted in > 7 days (uptime from `mac_system_info`):
   by design. Fewer tabs is the fix — and in D2, Noah quits them for the user.
 
 ## Portability note
-macOS versions vary across customers. Treat `vm_stat`, `purge`, and the
-`mac_*` tools as available everywhere (stable for many releases), but for any
-`shell_run` step, check the result and degrade gracefully — report a step as
-"skipped" if a command isn't present rather than failing the whole flow. Do
-not assume a specific macOS version.
+macOS versions vary across customers. For any `shell_run` step, check the
+result and degrade gracefully — report "skipped" if a command isn't present
+rather than failing the flow. Don't assume a specific macOS version.
 
 ## Tools referenced
-- `mac_system_info` — CPU, memory, disk, uptime overview
-- `mac_process_list` — top processes by CPU and memory
-- `mac_disk_usage` — disk space check
-- `mac_kill_process` — force-quit a runaway process (NeedsApproval tier)
-- `shell_run` — `vm_stat` (re-measure) and `sudo purge` (memory relief)
+- `mac_performance_diagnose` — one-call diagnosis: primary cause + signals +
+  top memory/CPU processes (use this first; re-run it to verify after a fix)
+- `mac_kill_process` — graceful force-quit (SIGTERM/15) (NeedsApproval tier)
+- `shell_run` — `sudo purge` (memory relief)
+- `mac_system_info` / `mac_process_list` / `mac_disk_usage` — only if you need
+  raw detail the diagnose tool didn't surface
 
 ## Escalation
 If performance is still poor after diagnosis:
