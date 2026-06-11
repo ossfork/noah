@@ -555,6 +555,12 @@ export async function consumerGetEntitlement(): Promise<Entitlement | null> {
   return await invoke<Entitlement | null>("consumer_get_entitlement");
 }
 
+/** Activation beacon — fired once per launch so an app-open is counted
+ *  even if the user never sends a message. Best-effort. */
+export async function consumerNotifyAppOpen(): Promise<void> {
+  await invoke<void>("consumer_notify_app_open");
+}
+
 export async function consumerNotifyIssueStarted(
   tzOffsetMinutes?: number,
   // Conversation/issue context (all optional, ignored by older servers):

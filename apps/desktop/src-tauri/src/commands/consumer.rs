@@ -129,6 +129,19 @@ pub async fn consumer_get_entitlement(
 }
 
 #[tauri::command]
+pub async fn consumer_notify_app_open(
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let (session_tok, device_id) = current_auth(&state.app_dir);
+    let Some(auth) = auth_ref(&session_tok, &device_id) else {
+        return Ok(());
+    };
+    // Best-effort beacon — never surface an error to the UI.
+    let _ = client::notify_app_open(&auth).await;
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn consumer_notify_issue_started(
     state: State<'_, AppState>,
     tz_offset_minutes: Option<i32>,

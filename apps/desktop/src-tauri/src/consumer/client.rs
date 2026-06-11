@@ -124,6 +124,19 @@ pub async fn fetch_entitlement(auth: &Auth<'_>) -> Result<Entitlement> {
     Ok(resp.json().await?)
 }
 
+/// Fire-and-forget "app opened" beacon — the activation signal. Sent
+/// once per launch before any message, so a device that opens the app
+/// and bounces without asking anything is still counted. No body; the
+/// server ensures the entitlement row and stamps last_seen.
+pub async fn notify_app_open(auth: &Auth<'_>) -> Result<()> {
+    let req = client().post(format!("{}/events/app-open", base_url()));
+    let resp = apply_auth(req, auth).send().await?;
+    if !resp.status().is_success() {
+        return Err(anyhow!("app-open failed: {}", resp.status()));
+    }
+    Ok(())
+}
+
 pub async fn notify_issue_started(
     auth: &Auth<'_>,
     tz_offset_minutes: Option<i32>,
