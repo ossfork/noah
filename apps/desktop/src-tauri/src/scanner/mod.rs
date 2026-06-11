@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub mod backups;
 pub mod disk;
 pub mod network;

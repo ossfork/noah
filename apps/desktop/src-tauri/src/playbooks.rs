@@ -716,7 +716,7 @@ impl PlaybookRegistry {
         let entries = std::fs::read_dir(&self.playbooks_dir)?;
         for entry in entries.flatten() {
             let path = entry.path();
-            if !path.is_file() || !path.extension().is_some_and(|ext| ext == "md") {
+            if !path.is_file() || path.extension().is_none_or(|ext| ext != "md") {
                 continue;
             }
             let Ok(content) = std::fs::read_to_string(&path) else { continue };
@@ -742,7 +742,7 @@ impl PlaybookRegistry {
         }
 
         // Return highest-precedence match only.
-        matches.sort_by(|a, b| b.source.cmp(&a.source));
+        matches.sort_by_key(|b| std::cmp::Reverse(b.source));
         if matches.len() > 1 {
             eprintln!(
                 "[playbooks] '{}': returning {} version, shadowing {} other source(s)",

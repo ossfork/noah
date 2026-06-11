@@ -41,6 +41,7 @@ struct RawCheck {
     detail: String,
 }
 
+#[allow(clippy::type_complexity)]
 fn checks_to_results(checks: &[RawCheck], generation: i64) -> Vec<(
     String, Option<String>, Option<String>, Option<f64>,
     Option<String>, Option<String>, bool, i64,

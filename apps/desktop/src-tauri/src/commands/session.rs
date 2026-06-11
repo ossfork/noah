@@ -283,7 +283,7 @@ pub async fn export_session(
                 change.tool_name, change.description, status
             ));
         }
-        md.push_str("\n");
+        md.push('\n');
     }
 
     md.push_str(&format!(

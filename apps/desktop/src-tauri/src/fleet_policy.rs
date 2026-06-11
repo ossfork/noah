@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //! Fleet policy enforcement — applies admin-defined rules from the fleet dashboard.
 //!
 //! Policies are delivered via the checkin response and persisted as `fleet_policy.json`.

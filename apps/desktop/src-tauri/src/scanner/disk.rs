@@ -119,27 +119,12 @@ fn categorize_path(path: &str) -> &'static str {
 
 // ── Scan state persisted in scan_jobs.config ─────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 struct DiskScanState {
-    /// Queue of directories still to scan (breadth-first).
     queue: VecDeque<String>,
-    /// Total top-level dirs we started with (for progress calculation).
     total_top_level: usize,
-    /// How many top-level dirs we've finished.
     completed_top_level: usize,
-    /// Current generation counter.
     generation: i64,
-}
-
-impl Default for DiskScanState {
-    fn default() -> Self {
-        Self {
-            queue: VecDeque::new(),
-            total_top_level: 0,
-            completed_top_level: 0,
-            generation: 0,
-        }
-    }
 }
 
 // ── DiskScanner ──────────────────────────────────────────────────────
@@ -164,7 +149,7 @@ impl DiskScanner {
         let mut results: Vec<(String, u64)> = Vec::new();
 
         for line in stdout.lines() {
-            let parts: Vec<&str> = line.splitn(2, |c: char| c == '\t' || c == ' ').collect();
+            let parts: Vec<&str> = line.splitn(2, ['\t', ' ']).collect();
             if parts.len() == 2 {
                 // du output is: SIZE\tPATH — but there may be extra spaces.
                 let size_str = parts[0].trim();
@@ -178,7 +163,7 @@ impl DiskScanner {
             }
         }
 
-        results.sort_by(|a, b| b.1.cmp(&a.1));
+        results.sort_by_key(|b| std::cmp::Reverse(b.1));
         Ok(results)
     }
 

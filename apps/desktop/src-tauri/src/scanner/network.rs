@@ -53,6 +53,7 @@ struct RawCheck {
 }
 
 /// Convert raw checks into the scan_results tuple format used by journal.
+#[allow(clippy::type_complexity)]
 fn checks_to_results(checks: &[RawCheck], generation: i64) -> Vec<(
     String,           // path (we use check id)
     Option<String>,   // category

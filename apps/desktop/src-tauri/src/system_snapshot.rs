@@ -174,7 +174,7 @@ fn count_plist_files(dir: &std::path::Path) -> usize {
                 .filter(|e| {
                     e.path()
                         .extension()
-                        .map_or(false, |ext| ext == "plist")
+                        .is_some_and(|ext| ext == "plist")
                 })
                 .count()
         })

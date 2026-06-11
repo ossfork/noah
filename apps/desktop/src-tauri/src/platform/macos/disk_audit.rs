@@ -26,6 +26,7 @@ impl DiskAudit {
 
     /// Try to get results from cached background scan data.
     /// Returns None if no fresh data (<24h) is available.
+    #[allow(clippy::type_complexity)]
     fn try_cached_results(
         &self,
         target: Option<&str>,
@@ -82,15 +83,13 @@ impl DiskAudit {
             .ok()?;
 
         let mut results: Vec<(String, String, u64)> = Vec::new();
-        for row in rows {
-            if let Ok((path, label, size)) = row {
-                let size_kb = size.unwrap_or(0.0) as u64;
-                if size_kb > 0 {
-                    let display_label = label.unwrap_or_else(|| {
-                        path.rsplit('/').next().unwrap_or(&path).to_string()
-                    });
-                    results.push((display_label, path, size_kb));
-                }
+        for (path, label, size) in rows.flatten() {
+            let size_kb = size.unwrap_or(0.0) as u64;
+            if size_kb > 0 {
+                let display_label = label.unwrap_or_else(|| {
+                    path.rsplit('/').next().unwrap_or(&path).to_string()
+                });
+                results.push((display_label, path, size_kb));
             }
         }
 
@@ -293,7 +292,7 @@ impl Tool for DiskAudit {
             let min_kb = min_size_mb.map(|mb| (mb * 1024.0) as u64).unwrap_or(0);
 
             for line in stdout.lines() {
-                let parts: Vec<&str> = line.splitn(2, |c: char| c == '\t' || c == ' ').collect();
+                let parts: Vec<&str> = line.splitn(2, ['\t', ' ']).collect();
                 if parts.len() == 2 {
                     let size_str = parts[0].trim();
                     let path = parts[1].trim().to_string();
@@ -306,7 +305,7 @@ impl Tool for DiskAudit {
                 }
             }
 
-            results.sort_by(|a, b| b.2.cmp(&a.2));
+            results.sort_by_key(|b| std::cmp::Reverse(b.2));
             return build_output(results, Some(&format!("(live scan of {})", target_dir)), None);
         }
 
@@ -334,7 +333,7 @@ impl Tool for DiskAudit {
             .unwrap_or_default();
         let snapshot_count = tm_output.lines().filter(|l| l.contains("com.apple.TimeMachine")).count();
 
-        results.sort_by(|a, b| b.2.cmp(&a.2));
+        results.sort_by_key(|b| std::cmp::Reverse(b.2));
 
         let total_kb: u64 = results.iter().map(|(_, _, kb)| kb).sum();
 

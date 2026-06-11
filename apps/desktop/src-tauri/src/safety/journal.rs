@@ -1294,6 +1294,7 @@ pub fn get_recent_traces(conn: &Connection, limit: usize) -> Result<Vec<(String,
 // ── Proactive suggestions ────────────────────────────────────────────
 
 /// Insert a proactive suggestion into the database.
+#[allow(dead_code)]
 pub fn insert_proactive_suggestion(
     conn: &Connection,
     id: &str,
@@ -1456,6 +1457,7 @@ pub struct ScanResult {
 }
 
 /// Insert a batch of scan results, replacing any existing rows for the same paths within a scan_type.
+#[allow(clippy::type_complexity)]
 pub fn upsert_scan_results(conn: &Connection, scan_type: &str, results: &[(String, Option<String>, Option<String>, Option<f64>, Option<String>, Option<String>, bool, i64)]) -> Result<()> {
     let now = chrono::Utc::now().to_rfc3339();
     let mut stmt = conn.prepare(
@@ -1546,6 +1548,7 @@ pub fn query_scan_results(
 }
 
 /// Get the timestamp of the most recent scan result for a scan_type.
+#[allow(dead_code)]
 pub fn latest_scan_timestamp(conn: &Connection, scan_type: &str) -> Result<Option<String>> {
     let mut stmt = conn.prepare(
         "SELECT MAX(scanned_at) FROM system_scan_results WHERE scan_type = ?1",
@@ -1614,6 +1617,7 @@ pub fn list_health_scores(conn: &Connection, limit: usize) -> Result<Vec<HealthS
 
 /// A persisted auto-heal run record.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct AutoHealRun {
     pub id: String,
     pub check_id: String,
@@ -1629,6 +1633,7 @@ pub struct AutoHealRun {
 }
 
 /// Insert a new auto-heal run.
+#[allow(dead_code)]
 pub fn insert_auto_heal_run(conn: &Connection, run: &AutoHealRun) -> Result<()> {
     conn.execute(
         "INSERT INTO auto_heal_runs (id, check_id, playbook_slug, session_id, triage_reason, started_at, completed_at, success, score_before, score_after, error_message)
@@ -1652,6 +1657,7 @@ pub fn insert_auto_heal_run(conn: &Connection, run: &AutoHealRun) -> Result<()> 
 }
 
 /// Update an auto-heal run with completion results.
+#[allow(dead_code)]
 pub fn update_auto_heal_run(
     conn: &Connection,
     id: &str,
@@ -1670,6 +1676,7 @@ pub fn update_auto_heal_run(
 }
 
 /// List recent auto-heal runs.
+#[allow(dead_code)]
 pub fn list_auto_heal_runs(conn: &Connection, limit: usize) -> Result<Vec<AutoHealRun>> {
     let mut stmt = conn.prepare(
         "SELECT id, check_id, playbook_slug, session_id, triage_reason, started_at, completed_at, success, score_before, score_after, error_message

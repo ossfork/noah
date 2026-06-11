@@ -50,7 +50,8 @@ pub struct AppState {
 /// Load auth — pure BYOK.
 ///   1. BYOK (api_key.txt) — the user's own Anthropic API key.
 ///   2. ANTHROPIC_API_KEY env var (dev fallback).
-/// Requests always go directly to Anthropic; there is no proxy/consumer path.
+///
+///   Requests always go directly to Anthropic; there is no proxy/consumer path.
 // TODO(byok-ux): let users set the API key from Settings with good ergonomics,
 // not by hand-editing api_key.txt
 fn load_auth(app_dir: &std::path::Path) -> AuthMode {

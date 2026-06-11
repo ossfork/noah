@@ -241,7 +241,7 @@ impl Tool for CrashLogReader {
         }
 
         // Sort by modification time (newest first) and take up to 3.
-        reports.sort_by(|a, b| b.1.cmp(&a.1));
+        reports.sort_by_key(|b| std::cmp::Reverse(b.1));
         let reports = &reports[..reports.len().min(3)];
 
         let mut summaries = Vec::new();

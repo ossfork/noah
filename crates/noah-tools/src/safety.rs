@@ -321,7 +321,7 @@ fn tokenize(cmd: &str) -> Vec<String> {
 
 /// Split a compound command on `;`, newline, `&&`, `||`, `|` into simple parts.
 fn split_commands(cmd: &str) -> Vec<String> {
-    cmd.split(|c| c == ';' || c == '\n')
+    cmd.split([';', '\n'])
         .flat_map(|s| s.split("&&"))
         .flat_map(|s| s.split("||"))
         .flat_map(|s| s.split('|'))
@@ -499,13 +499,13 @@ fn is_delete_leader(leader: &str) -> bool {
 fn has_xargs_rm(cmd: &str) -> bool {
     for part in split_commands(cmd) {
         let (leader, args) = leader_and_args(&part);
-        if leader == "xargs" {
-            if args.iter().any(|a| {
+        if leader == "xargs"
+            && args.iter().any(|a| {
                 let n = a.trim_start_matches("./");
                 n == "rm" || n == "unlink" || n == "srm"
-            }) {
-                return true;
-            }
+            })
+        {
+            return true;
         }
     }
     false
@@ -520,10 +520,8 @@ fn delete_targets_raw(cmd: &str) -> Vec<String> {
         let (leader, args) = leader_and_args(&part);
         match leader.as_str() {
             "rm" | "unlink" | "srm" => out.extend(path_operands(&args)),
-            "find" => {
-                if find_args_destructive(&args) || xargs_rm {
-                    out.extend(find_roots(&args));
-                }
+            "find" if find_args_destructive(&args) || xargs_rm => {
+                out.extend(find_roots(&args));
             }
             _ => {}
         }
@@ -607,10 +605,10 @@ fn mentions_deletion(cmd: &str) -> bool {
             "eval" => return true,
             // pipe-to-shell laundering (`… | sh`)
             "sh" | "bash" | "zsh" if has_pipe(cmd) => return true,
-            leader if is_shell_leader(leader) => {
-                if shell_script_arg(&args).is_some_and(|script| mentions_deletion(script)) {
-                    return true;
-                }
+            leader if is_shell_leader(leader)
+                && shell_script_arg(&args).is_some_and(mentions_deletion) =>
+            {
+                return true;
             }
             _ => {}
         }
@@ -698,7 +696,7 @@ fn canonical_violation(cmd: &str) -> Option<String> {
             let wrapped_delete = is_delete_leader(&leader)
                 || (leader == "find" && find_args_destructive(&args))
                 || (is_shell_leader(&leader)
-                    && shell_script_arg(&args).is_some_and(|script| mentions_deletion(script)));
+                    && shell_script_arg(&args).is_some_and(mentions_deletion));
             if wrapped_delete {
                 return Some(tip_noncanonical(&format!("the wrapper `{}`", raw_leader)));
             }
@@ -736,13 +734,13 @@ fn canonical_violation(cmd: &str) -> Option<String> {
             "srm" | "shred" | "rmdir" | "xargs" | "eval" => {
                 return Some(tip_noncanonical(&format!("`{}`", leader)));
             }
-            leader if is_shell_leader(leader) => {
-                if shell_script_arg(&args).is_some_and(|script| mentions_deletion(script)) {
-                    return Some(tip_noncanonical(&format!(
-                        "a nested `{}` shell script",
-                        leader
-                    )));
-                }
+            leader if is_shell_leader(leader)
+                && shell_script_arg(&args).is_some_and(mentions_deletion) =>
+            {
+                return Some(tip_noncanonical(&format!(
+                    "a nested `{}` shell script",
+                    leader
+                )));
             }
             _ => {}
         }

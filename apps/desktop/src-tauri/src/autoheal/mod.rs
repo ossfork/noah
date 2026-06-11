@@ -1,3 +1,7 @@
+#![allow(dead_code)]
+#![allow(clippy::manual_unwrap_or_default)]
+#![allow(clippy::collapsible_match)]
+
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;

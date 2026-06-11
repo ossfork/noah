@@ -141,6 +141,7 @@ pub struct SendMessageV2Result {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[allow(clippy::enum_variant_names)]
 pub enum UserEventType {
     UserConfirm,
     UserSkipOptional,
@@ -155,7 +156,7 @@ struct AnswerPayload {
 
 // ── Parsing ──
 
-fn parse_between<'a>(s: &'a str, start: &str, end: &str) -> Option<String> {
+fn parse_between(s: &str, start: &str, end: &str) -> Option<String> {
     let i = s.find(start)?;
     let rest = &s[i + start.len()..];
     let j = rest.find(end)?;

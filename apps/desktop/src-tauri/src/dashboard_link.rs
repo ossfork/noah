@@ -420,6 +420,7 @@ pub async fn push_verification(
 }
 
 /// Push an auto-heal event to the fleet dashboard.
+#[allow(dead_code)]
 pub async fn push_auto_heal_event(
     config: &DashboardConfig,
     check_id: &str,
@@ -458,6 +459,7 @@ pub async fn push_auto_heal_event(
 
 /// Push a session report to the fleet dashboard.
 /// Called when a session ends or when resolved status changes.
+#[allow(clippy::too_many_arguments)]
 pub async fn push_session_report(
     config: &DashboardConfig,
     session_id: &str,

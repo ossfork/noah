@@ -90,15 +90,14 @@ pub fn compute_score(
 
     // Weighted overall: only count categories that have checks.
     let total_weight: u32 = category_scores.iter().map(|cs| cs.category.weight() as u32).sum();
-    let overall = if total_weight > 0 {
-        let weighted_sum: u32 = category_scores
-            .iter()
-            .map(|cs| cs.score as u32 * cs.category.weight() as u32)
-            .sum();
-        (weighted_sum / total_weight).min(100) as u8
-    } else {
-        0
-    };
+    let weighted_sum: u32 = category_scores
+        .iter()
+        .map(|cs| cs.score as u32 * cs.category.weight() as u32)
+        .sum();
+    let overall = weighted_sum
+        .checked_div(total_weight)
+        .map(|q| (q as u8).min(100))
+        .unwrap_or(0);
 
     HealthScore {
         overall_score: overall,

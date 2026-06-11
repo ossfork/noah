@@ -235,9 +235,8 @@ pub async fn run_prompt_flow(prompt: &str, max_turns: usize) -> Result<PromptRun
             Some(AssistantUiPayload::UserQuestion(ref uq)) => {
                 // Generate a reasonable auto-answer based on question type.
                 let q = &uq.questions[0];
-                if q.secure_input.is_some() {
-                    // For secure inputs, use preset value if available, else dummy.
-                    let secret_name = q.secure_input.as_ref().unwrap().secret_name.clone();
+                if let Some(si) = &q.secure_input {
+                    let secret_name = si.secret_name.clone();
                     let value = preset_secrets
                         .get(&secret_name)
                         .cloned()
