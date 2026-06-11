@@ -349,10 +349,19 @@ async function main() {
   }
 
   if (!releaseExists) {
-    await runCommand("gh", [
+    const createArgs = [
       "release", "create", tag, "--repo", RELEASE_REPO,
       "--title", `Noah ${tag}`, "--generate-notes",
-    ]);
+    ];
+    // BYOK (any non-"desktop" channel) releases on xuy/noah must NEVER become
+    // the repo's "Latest" release. Legacy 1.1.0 installs resolve updates via
+    //   github.com/xuy/noah/releases/latest/download/latest.json
+    // and that pointer must keep resolving to the one-hop migration release
+    // (which carries latest.json). A BYOK release tagged higher would steal
+    // "Latest", 404 the legacy channel, and strand un-migrated users. Marking
+    // BYOK releases as prereleases keeps them off the "Latest" pointer.
+    if (UPDATE_CHANNEL !== "desktop") createArgs.push("--prerelease");
+    await runCommand("gh", createArgs);
   }
 
   const toUpload = [...artifacts];
