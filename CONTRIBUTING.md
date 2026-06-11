@@ -1,6 +1,7 @@
-# Contributing
+# Contributing to Noah for Tinkerers
 
-Noah is built in public. Issues, ideas, and PRs are welcome.
+Noah for Tinkerers is the open-source, bring-your-own-key build of Noah, built in public.
+Issues, ideas, and PRs are welcome.
 
 ## Development setup
 
@@ -100,14 +101,28 @@ crates/
 
 ## Version and release
 
-Version lives in 4 files — keep them in sync:
+The app version lives in 3 files — keep them in sync:
 - `apps/desktop/src-tauri/tauri.conf.json`
 - `apps/desktop/package.json`
 - `apps/desktop/src-tauri/Cargo.toml`
-- `crates/noah-tools/Cargo.toml`
+
+(`crates/noah-tools/Cargo.toml` is an internal crate with its own version — leave it alone.)
 
 Tag format: `v{VERSION}`.
 
-Cross-platform release commands:
-- Build locally only: `pnpm release:build`
-- Build + upload artifacts to GitHub Release: `pnpm release:upload`
+### Cutting a release
+
+Releases are signed with the project's updater key and distributed through the **bring-your-own-key
+update channel** (`onnoah.app/byok`). The release script publishes GitHub releases as
+**prereleases** on purpose, so they stay off the repo's "Latest" pointer and never collide with
+other Noah update channels.
+
+1. **macOS (local):** `pnpm release:upload` — builds the universal `.dmg`, signs the updater
+   artifact, creates/updates the GitHub prerelease, and mirrors the binaries to R2.
+2. **Windows + Linux:** run the **Release** GitHub Action (`.github/workflows/release.yml`),
+   which builds those platforms and merges them into the same release manifest.
+3. **Publish the update feed:** `NOAH_UPDATE_CHANNEL=byok node scripts/r2-sync.mjs <tag>`
+   (requires `wrangler` authenticated to the Cloudflare account that hosts the bucket). This
+   pushes `onnoah.app/byok/latest.json` + the per-platform binaries so installed apps see the update.
+
+Build locally without publishing: `pnpm release:build`.

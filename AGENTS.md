@@ -1,5 +1,11 @@
 # AGENTS.md
 
+This repo is **Noah for Tinkerers** — the open-source, bring-your-own-key build of Noah (a
+Tauri desktop app that safely fixes computer problems with Claude). The in-app assistant is
+named "Noah"; the product/distribution is "Noah for Tinkerers". There is no backend — the app
+talks to Anthropic directly with the user's own API key. (The paid product lives in a separate
+private repo; don't reintroduce billing/paywall/account code here.)
+
 ## Commit Policy
 - **Commit after every meaningful change.** Bug fix, feature, refactor — commit it immediately. Don't batch unrelated changes.
 - Use conventional commits: `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`, `test:`.
@@ -16,8 +22,8 @@
 - Don't commit code that fails tests or type-checking.
 
 ## Version & Release
-- Version lives in 4 files — keep in sync: `tauri.conf.json`, `apps/desktop/package.json`, `apps/desktop/src-tauri/Cargo.toml`, `crates/noah-tools/Cargo.toml`.
-- Tag format: `v{VERSION}`. Use `node scripts/release.mjs` to build + publish.
+- App version lives in 3 files — keep in sync: `apps/desktop/src-tauri/tauri.conf.json`, `apps/desktop/package.json`, `apps/desktop/src-tauri/Cargo.toml`. (`crates/noah-tools/Cargo.toml` versions independently — don't touch it.)
+- Tag format: `v{VERSION}`. Releases publish as **prereleases** to the BYOK update channel (`onnoah.app/byok`); see CONTRIBUTING.md → "Cutting a release". Use `node scripts/release.mjs` to build + publish.
 
 ## Project Structure
 - `apps/desktop/src/` — React frontend (Vite + Tailwind)

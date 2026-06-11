@@ -1,12 +1,12 @@
 <p align="center">
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License: AGPL-3.0"></a>
+  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
 </p>
 
 <p align="center">
   <a href="../README.md">English</a> | <strong>Español</strong> | <a href="README.ja.md">日本語</a> | <a href="README.zh-CN.md">中文</a>
 </p>
 
-# Noah
+# Noah for Tinkerers
 
 **Soporte técnico que realmente resuelve problemas.** Noah es una app de escritorio que diagnostica y soluciona problemas informáticos en español. Describe lo que pasa, Noah lo investiga, te muestra el plan y lo arregla — con un solo clic.
 
@@ -80,7 +80,7 @@ Tu clave se guarda localmente en tu máquina. Solo se usa para comunicarse direc
 
 ## Licencia
 
-AGPL-3.0
+Apache-2.0
 
 ---
 

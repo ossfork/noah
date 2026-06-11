@@ -1,16 +1,26 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
+  <img src="https://img.shields.io/badge/key-bring%20your%20own-5b8def.svg" alt="Bring your own key">
 </p>
 
 <p align="center">
   <strong>English</strong> | <a href="docs/README.es.md">Español</a> | <a href="docs/README.ja.md">日本語</a> | <a href="docs/README.zh-CN.md">中文</a>
 </p>
 
-# Noah
+# Noah for Tinkerers
 
-**IT support that actually fixes things.** Noah is a desktop app that diagnoses and resolves computer problems in plain English — then keeps your machine healthy automatically.
+**Let an AI fix your computer — without letting it run wild.** Noah for Tinkerers is the
+open-source, bring-your-own-key build of Noah: a desktop app that diagnoses and resolves
+computer problems in plain English, with a safety harness around every action.
 
-No tickets. No hold music. No Googling error codes.
+You bring an Anthropic API key; Noah talks to Claude directly from your machine. No
+subscription, no account, no backend.
+
+> **Why not just point Claude or Codex at your machine?** Raw models have no guardrails —
+> they'll happily `rm -rf` the wrong thing — and sandboxed tools can't touch the real system
+> you're trying to fix. Noah is the middle path: a real desktop agent that runs read-only
+> diagnostics first, shows you the plan, gates destructive actions behind explicit approval,
+> and keeps boot config, firmware, and security software permanently off-limits.
 
 <p align="center">
   <img src="docs/images/noah-hero.png" width="800" alt="Noah diagnosing a slow computer, finding runaway processes, and fixing the issue in one click" />
@@ -48,7 +58,7 @@ Playbooks are step-by-step remediation scripts written in Markdown. Noah ships w
 - Performance forensics
 - And more
 
-Playbooks can also be pushed to your machine by your IT team through fleet management. Noah runs them automatically or shows them as guided fixes.
+You can also write your own playbooks in Markdown and drop them in — Noah runs them automatically or shows them as guided fixes.
 
 ### Auto-Heal
 
@@ -75,17 +85,19 @@ When enabled, Noah automatically triages failing health checks, picks the right 
 
 ### Download
 
-Go to [Releases](https://github.com/xuy/noah/releases) and grab the latest:
-- **macOS** — `.dmg` (universal, Apple Silicon + Intel) — signed with our Apple Developer ID and notarized by Apple, so Gatekeeper opens it cleanly on first launch
-- **Windows** — `.msi` or `.exe` installer (x64)
+Grab the latest build from the [Releases page](https://github.com/xuy/noah/releases):
+- **macOS** — `.dmg` (universal, Apple Silicon + Intel)
+- **Windows** — `.msi` / `.exe` (x64)
+- **Linux** — `.AppImage`
 
-### Add your Anthropic API key
+Noah keeps itself up to date after install.
 
-Noah is BYOK: it talks directly to Anthropic with your own API key. Open
-Settings, paste an Anthropic key that starts with `sk-ant-`, and start fixing.
-For development, you can also set `ANTHROPIC_API_KEY` before launching Noah.
+### Bring your own Anthropic key
 
-Your key stays on your machine and is used only for direct Anthropic API calls.
+Open **Settings** and paste an Anthropic key (it starts with `sk-ant-`) — or set
+`ANTHROPIC_API_KEY` before launching. Your key is stored in your system keychain, stays on
+your machine, and is used only for direct calls to Anthropic. Noah for Tinkerers has no
+backend of its own.
 
 ## Safety
 
@@ -94,11 +106,16 @@ Your key stays on your machine and is used only for direct Anthropic API calls.
 - **Flags risky actions** — `rm`, `sudo`, disk formatting, and similar commands require explicit approval with a plain-language explanation
 - **Logs everything** — every action is recorded in a session journal you can review
 - **Hard limits** — boot config, firmware, security software, disk partitions, and system integrity protection are permanently off-limits
-- **Credentials stay local** — API keys and secrets stay on your device and are never sent to any Noah backend
+- **Credentials stay local** — API keys and secrets stay on your device and are never sent to any server
+
+## Open source & contributing
+
+Noah for Tinkerers is built in public. Issues, ideas, and pull requests are welcome — see
+[CONTRIBUTING.md](CONTRIBUTING.md) to get a dev build running in a couple of minutes.
 
 ## License
 
-Apache-2.0. This is the open-source, bring-your-own-API-key build of Noah.
+Apache-2.0 — see [LICENSE](LICENSE).
 
 ---
 

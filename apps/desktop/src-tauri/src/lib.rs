@@ -95,7 +95,7 @@ pub fn clear_auth_files(app_dir: &std::path::Path) {
 /// Migrate user data from the old `com.itman.app` directory to the new location.
 ///
 /// Tauri derives the app data dir from `identifier` in tauri.conf.json.
-/// We renamed from `com.itman.app` → `app.onnoah.desktop`, so existing users
+/// We renamed from `com.itman.app` → `app.onnoah.tinkerers`, so existing users
 /// have their DB, keys, and knowledge under the old path. This function copies
 /// all files from the old dir into the new dir (without overwriting), then
 /// removes the old directory.
@@ -713,7 +713,7 @@ mod tests {
         fs::write(old_dir.join("knowledge/note.md"), b"# My note").unwrap();
 
         // New dir exists but is empty (no journal.db).
-        let new_dir = parent.join("app.onnoah.desktop");
+        let new_dir = parent.join("app.onnoah.tinkerers");
         fs::create_dir_all(&new_dir).unwrap();
 
         migrate_old_data_dir(&new_dir);
@@ -747,7 +747,7 @@ mod tests {
         fs::write(old_dir.join("journal.db"), b"old-data").unwrap();
 
         // New dir already has its own journal.db.
-        let new_dir = parent.join("app.onnoah.desktop");
+        let new_dir = parent.join("app.onnoah.tinkerers");
         fs::create_dir_all(&new_dir).unwrap();
         fs::write(new_dir.join("journal.db"), b"new-data").unwrap();
 
@@ -765,7 +765,7 @@ mod tests {
     #[test]
     fn test_migrate_noop_when_no_old_dir() {
         let tmp = tempfile::tempdir().unwrap();
-        let new_dir = tmp.path().join("app.onnoah.desktop");
+        let new_dir = tmp.path().join("app.onnoah.tinkerers");
         fs::create_dir_all(&new_dir).unwrap();
 
         // Should not panic or error.
@@ -783,7 +783,7 @@ mod tests {
         fs::write(old_dir.join("journal.db"), b"old-db").unwrap();
 
         // New dir has api_key.txt but no journal.db → migration runs.
-        let new_dir = parent.join("app.onnoah.desktop");
+        let new_dir = parent.join("app.onnoah.tinkerers");
         fs::create_dir_all(&new_dir).unwrap();
         fs::write(new_dir.join("api_key.txt"), b"new-key").unwrap();
 
