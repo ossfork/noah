@@ -176,10 +176,7 @@ impl Tool for CrashLogReader {
                     match output {
                         Ok(o) if o.status.success() => {
                             let text = String::from_utf8_lossy(&o.stdout).to_string();
-                            return Ok(ToolResult::read_only(
-                                text,
-                                json!({ "path": path }),
-                            ));
+                            return Ok(ToolResult::read_only(text, json!({ "path": path })));
                         }
                         _ => {
                             return Ok(ToolResult::read_only(
@@ -195,9 +192,7 @@ impl Tool for CrashLogReader {
         // Search for crash reports matching app_name.
         let search_name = app_name.unwrap_or("").to_lowercase();
         if search_name.is_empty() {
-            anyhow::bail!(
-                "Either 'app_name' or 'log_path' must be provided."
-            );
+            anyhow::bail!("Either 'app_name' or 'log_path' must be provided.");
         }
 
         let mut reports: Vec<(PathBuf, std::time::SystemTime)> = Vec::new();

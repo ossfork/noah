@@ -5,10 +5,7 @@ use crate::AppState;
 
 /// Trigger an on-demand scan for the given scan type.
 #[tauri::command]
-pub async fn trigger_scan(
-    state: State<'_, AppState>,
-    scan_type: String,
-) -> Result<String, String> {
+pub async fn trigger_scan(state: State<'_, AppState>, scan_type: String) -> Result<String, String> {
     {
         // Unpause if paused.
         let mut paused = state
@@ -29,10 +26,7 @@ pub async fn trigger_scan(
 
 /// Pause a running scan.
 #[tauri::command]
-pub async fn pause_scan(
-    state: State<'_, AppState>,
-    scan_type: String,
-) -> Result<(), String> {
+pub async fn pause_scan(state: State<'_, AppState>, scan_type: String) -> Result<(), String> {
     let mut paused = state
         .scanner_pause
         .lock()
@@ -43,10 +37,7 @@ pub async fn pause_scan(
 
 /// Resume a paused scan.
 #[tauri::command]
-pub async fn resume_scan(
-    state: State<'_, AppState>,
-    scan_type: String,
-) -> Result<(), String> {
+pub async fn resume_scan(state: State<'_, AppState>, scan_type: String) -> Result<(), String> {
     let mut paused = state
         .scanner_pause
         .lock()

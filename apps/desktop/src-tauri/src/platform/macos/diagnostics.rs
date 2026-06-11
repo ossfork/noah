@@ -382,7 +382,7 @@ pub fn is_dangerous_command(command: &str) -> bool {
 ///
 /// Lowercase substrings; matched against the lowercased command string.
 const TCC_PROTECTED_PATH_FRAGMENTS: &[&str] = &[
-    "/library/cloudstorage",   // iCloud Drive, Google Drive, Dropbox, OneDrive bind mounts
+    "/library/cloudstorage", // iCloud Drive, Google Drive, Dropbox, OneDrive bind mounts
     "/library/mail",
     "/library/messages",
     "/library/calendars",
@@ -494,20 +494,29 @@ impl Tool for ShellRun {
         let needs_admin = command.trim_start().starts_with("sudo ");
         let (exec_program, exec_args, effective_command) = if needs_admin {
             // Strip "sudo " (and any sudo flags like -S, -n) to get the underlying command
-            let inner = command.trim_start()
-                .strip_prefix("sudo").unwrap()
+            let inner = command
+                .trim_start()
+                .strip_prefix("sudo")
+                .unwrap()
                 .trim_start()
                 .trim_start_matches(|c: char| c == '-' || c.is_alphanumeric())
                 .trim_start();
             // If stripping flags ate everything, use the part after "sudo "
             let inner = if inner.is_empty() {
-                command.trim_start().strip_prefix("sudo ").unwrap_or(command).trim()
+                command
+                    .trim_start()
+                    .strip_prefix("sudo ")
+                    .unwrap_or(command)
+                    .trim()
             } else {
                 inner
             };
             // Escape single quotes for AppleScript string
             let escaped = inner.replace('\\', "\\\\").replace('\'', "'\\''");
-            let osascript_cmd = format!("do shell script '{}' with administrator privileges", escaped);
+            let osascript_cmd = format!(
+                "do shell script '{}' with administrator privileges",
+                escaped
+            );
             (
                 "/usr/bin/osascript".to_string(),
                 vec!["-e".to_string(), osascript_cmd],
@@ -587,7 +596,10 @@ impl Tool for ShellRun {
 
         // Limit output length
         let truncated = if output.len() > 10_000 {
-            format!("{}...\n\n(output truncated at 10000 chars)", &output[..10_000])
+            format!(
+                "{}...\n\n(output truncated at 10000 chars)",
+                &output[..10_000]
+            )
         } else {
             output.clone()
         };
@@ -629,7 +641,9 @@ mod tests {
         assert!(!is_dangerous_command("brew list"));
         assert!(!is_dangerous_command("echo hello"));
         assert!(!is_dangerous_command("curl https://example.com"));
-        assert!(!is_dangerous_command("networksetup -setairportpower en0 on"));
+        assert!(!is_dangerous_command(
+            "networksetup -setairportpower en0 on"
+        ));
     }
 
     #[test]
@@ -693,8 +707,14 @@ mod tests {
         for (cmd, path) in [
             ("ls ~/Documents/private", "/documents"),
             ("find ~/Desktop -name '*.txt'", "/desktop"),
-            ("stat ~/Pictures/Photos\\ Library.photoslibrary", "photoslibrary"),
-            ("cat ~/Library/Mail/V10/MailData/Envelope\\ Index", "/library/mail"),
+            (
+                "stat ~/Pictures/Photos\\ Library.photoslibrary",
+                "photoslibrary",
+            ),
+            (
+                "cat ~/Library/Mail/V10/MailData/Envelope\\ Index",
+                "/library/mail",
+            ),
         ] {
             let output = format!("err: {}: Operation not permitted", path);
             assert!(
@@ -731,7 +751,10 @@ mod tests {
     fn shell_run_tier_for_dangerous_input() {
         let tool = ShellRun;
         let input = json!({"command": "rm -rf /tmp/foo"});
-        assert_eq!(tool.safety_tier_for_input(&input), SafetyTier::NeedsApproval);
+        assert_eq!(
+            tool.safety_tier_for_input(&input),
+            SafetyTier::NeedsApproval
+        );
     }
 
     #[test]

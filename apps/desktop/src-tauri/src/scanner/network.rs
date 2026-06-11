@@ -23,7 +23,11 @@ fn run_cmd(program: &str, args: &[&str], fallback: &str) -> String {
     match cmd.output() {
         Ok(output) if output.status.success() => {
             let s = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if s.is_empty() { fallback.to_string() } else { s }
+            if s.is_empty() {
+                fallback.to_string()
+            } else {
+                s
+            }
         }
         Ok(output) => {
             let combined = format!(
@@ -32,7 +36,11 @@ fn run_cmd(program: &str, args: &[&str], fallback: &str) -> String {
                 String::from_utf8_lossy(&output.stderr)
             );
             let trimmed = combined.trim().to_string();
-            if trimmed.is_empty() { fallback.to_string() } else { trimmed }
+            if trimmed.is_empty() {
+                fallback.to_string()
+            } else {
+                trimmed
+            }
         }
         _ => fallback.to_string(),
     }
@@ -54,15 +62,18 @@ struct RawCheck {
 
 /// Convert raw checks into the scan_results tuple format used by journal.
 #[allow(clippy::type_complexity)]
-fn checks_to_results(checks: &[RawCheck], generation: i64) -> Vec<(
-    String,           // path (we use check id)
-    Option<String>,   // category
-    Option<String>,   // key (label)
-    Option<f64>,      // value_num (100=pass, 50=warn, 0=fail)
-    Option<String>,   // value_text (status string)
-    Option<String>,   // metadata (detail)
-    bool,             // stale
-    i64,              // generation
+fn checks_to_results(
+    checks: &[RawCheck],
+    generation: i64,
+) -> Vec<(
+    String,         // path (we use check id)
+    Option<String>, // category
+    Option<String>, // key (label)
+    Option<f64>,    // value_num (100=pass, 50=warn, 0=fail)
+    Option<String>, // value_text (status string)
+    Option<String>, // metadata (detail)
+    bool,           // stale
+    i64,            // generation
 )> {
     checks
         .iter()
@@ -109,15 +120,12 @@ fn run_unix_checks() -> Vec<RawCheck> {
     // Internet connectivity
     let ping = run_cmd("ping", &["-c", "1", "-W", "3", "1.1.1.1"], "");
     let ping_ok = ping.contains("1 packets received") || ping.contains("1 received");
-    let latency = ping
-        .lines()
-        .find(|l| l.contains("time="))
-        .and_then(|l| {
-            l.split("time=")
-                .nth(1)
-                .and_then(|s| s.split_whitespace().next())
-                .map(|s| s.to_string())
-        });
+    let latency = ping.lines().find(|l| l.contains("time=")).and_then(|l| {
+        l.split("time=")
+            .nth(1)
+            .and_then(|s| s.split_whitespace().next())
+            .map(|s| s.to_string())
+    });
     checks.push(RawCheck {
         id: "network.internet",
         label: "Internet Connectivity",
@@ -170,7 +178,9 @@ fn run_windows_checks() -> Vec<RawCheck> {
     let mut checks = Vec::new();
 
     // DNS resolution
-    let dns = ps("try { Resolve-DnsName dns.google -ErrorAction Stop | Out-Null; 'ok' } catch { 'fail' }");
+    let dns = ps(
+        "try { Resolve-DnsName dns.google -ErrorAction Stop | Out-Null; 'ok' } catch { 'fail' }",
+    );
     let dns_ok = dns.trim() == "ok";
     checks.push(RawCheck {
         id: "network.dns",
@@ -190,12 +200,12 @@ fn run_windows_checks() -> Vec<RawCheck> {
         .lines()
         .find(|l| l.contains("time=") || l.contains("time<"))
         .and_then(|l| {
-            l.split("time")
-                .nth(1)
-                .and_then(|s| {
-                    let s = s.trim_start_matches('=').trim_start_matches('<');
-                    s.split_whitespace().next().map(|v| v.trim_end_matches("ms").to_string())
-                })
+            l.split("time").nth(1).and_then(|s| {
+                let s = s.trim_start_matches('=').trim_start_matches('<');
+                s.split_whitespace()
+                    .next()
+                    .map(|v| v.trim_end_matches("ms").to_string())
+            })
         });
     checks.push(RawCheck {
         id: "network.internet",
@@ -214,7 +224,11 @@ fn run_windows_checks() -> Vec<RawCheck> {
 
     // Default gateway
     let gw = ps("(Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Select-Object -First 1).NextHop");
-    let gateway = if gw.trim().is_empty() { None } else { Some(gw.trim().to_string()) };
+    let gateway = if gw.trim().is_empty() {
+        None
+    } else {
+        Some(gw.trim().to_string())
+    };
     checks.push(RawCheck {
         id: "network.gateway",
         label: "Default Gateway",

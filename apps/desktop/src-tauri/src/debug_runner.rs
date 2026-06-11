@@ -55,7 +55,10 @@ fn load_preset_secrets() -> HashMap<String, String> {
     match std::env::var("NOAH_SECRETS") {
         Ok(json_str) => {
             serde_json::from_str::<HashMap<String, String>>(&json_str).unwrap_or_else(|e| {
-                eprintln!("[debug_runner] Warning: failed to parse NOAH_SECRETS: {}", e);
+                eprintln!(
+                    "[debug_runner] Warning: failed to parse NOAH_SECRETS: {}",
+                    e
+                );
                 HashMap::new()
             })
         }
@@ -70,7 +73,10 @@ fn load_preset_answers() -> HashMap<String, String> {
     match std::env::var("NOAH_ANSWERS") {
         Ok(json_str) => {
             serde_json::from_str::<HashMap<String, String>>(&json_str).unwrap_or_else(|e| {
-                eprintln!("[debug_runner] Warning: failed to parse NOAH_ANSWERS: {}", e);
+                eprintln!(
+                    "[debug_runner] Warning: failed to parse NOAH_ANSWERS: {}",
+                    e
+                );
                 HashMap::new()
             })
         }
@@ -109,11 +115,7 @@ pub async fn run_prompt_flow(prompt: &str, max_turns: usize) -> Result<PromptRun
     std::fs::create_dir_all(&app_dir).context("Failed to create app dir")?;
 
     let db_path = app_dir.join("journal.db");
-    let db = journal::init_db(
-        db_path
-            .to_str()
-            .ok_or_else(|| anyhow!("Invalid DB path"))?,
-    )?;
+    let db = journal::init_db(db_path.to_str().ok_or_else(|| anyhow!("Invalid DB path"))?)?;
     let db_arc = Arc::new(Mutex::new(db));
 
     let knowledge_dir = knowledge::init_knowledge_dir(&app_dir)?;
@@ -153,8 +155,10 @@ pub async fn run_prompt_flow(prompt: &str, max_turns: usize) -> Result<PromptRun
         ));
     }
 
-    let pending_approvals: PendingApprovals =
-        Arc::new(Mutex::new(HashMap::<String, tokio::sync::oneshot::Sender<bool>>::new()));
+    let pending_approvals: PendingApprovals = Arc::new(Mutex::new(HashMap::<
+        String,
+        tokio::sync::oneshot::Sender<bool>,
+    >::new()));
     // Allow overriding the OS context for testing (e.g. emulate Linux on macOS).
     let os_context = match std::env::var("NOAH_PLATFORM") {
         Ok(plat) => format!("Platform: {}\nHostname: test-machine", plat),
@@ -205,7 +209,10 @@ pub async fn run_prompt_flow(prompt: &str, max_turns: usize) -> Result<PromptRun
         .await
         {
             Ok(res) => res.context("orchestrator send_message failed")?,
-            Err(_) => r#"{"kind":"info","summary":"Runner timeout waiting for assistant response."}"#.to_string(),
+            Err(_) => {
+                r#"{"kind":"info","summary":"Runner timeout waiting for assistant response."}"#
+                    .to_string()
+            }
         };
         {
             let conn = db_arc.lock().await;
@@ -262,15 +269,26 @@ pub async fn run_prompt_flow(prompt: &str, max_turns: usize) -> Result<PromptRun
                             // Fall back to heuristic auto-answers.
                             if header.contains("email") || question.contains("email") {
                                 "testuser@example.com".to_string()
-                            } else if header.contains("ssid") || question.contains("ssid") || question.contains("wi-fi") || question.contains("wifi") || question.contains("network name") {
+                            } else if header.contains("ssid")
+                                || question.contains("ssid")
+                                || question.contains("wi-fi")
+                                || question.contains("wifi")
+                                || question.contains("network name")
+                            {
                                 "TestNetwork".to_string()
                             } else if header.contains("server") || question.contains("server") {
                                 "mail.example.com".to_string()
-                            } else if header.contains("drive") || question.contains("drive") || question.contains("connect") {
+                            } else if header.contains("drive")
+                                || question.contains("drive")
+                                || question.contains("connect")
+                            {
                                 "My Backup Drive, 1TB, appears in Finder".to_string()
                             } else if header.contains("username") || question.contains("username") {
                                 "testuser".to_string()
-                            } else if header.contains("path") || question.contains("path") || question.contains("folder") {
+                            } else if header.contains("path")
+                                || question.contains("path")
+                                || question.contains("folder")
+                            {
                                 "/Users/test/Documents".to_string()
                             } else {
                                 "test-input-value".to_string()

@@ -19,15 +19,11 @@ pub async fn read_knowledge_file(
 ) -> Result<String, String> {
     let full_path = knowledge::safe_resolve(&state.knowledge_dir, &path)
         .map_err(|e| format!("Invalid path: {}", e))?;
-    std::fs::read_to_string(&full_path)
-        .map_err(|e| format!("Failed to read file: {}", e))
+    std::fs::read_to_string(&full_path).map_err(|e| format!("Failed to read file: {}", e))
 }
 
 #[tauri::command]
-pub async fn delete_knowledge_file(
-    state: State<'_, AppState>,
-    path: String,
-) -> Result<(), String> {
+pub async fn delete_knowledge_file(state: State<'_, AppState>, path: String) -> Result<(), String> {
     knowledge::delete_knowledge_file(&state.knowledge_dir, &path)
         .map_err(|e| format!("Failed to delete: {}", e))
 }

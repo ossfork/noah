@@ -21,7 +21,9 @@ impl DiskAudit {
 
     /// Create a DiskAudit with DB access for cached scan results.
     pub fn with_db(db_path: PathBuf) -> Self {
-        Self { db_path: Some(db_path) }
+        Self {
+            db_path: Some(db_path),
+        }
     }
 
     /// Try to get results from cached background scan data.
@@ -36,7 +38,8 @@ impl DiskAudit {
         let conn = rusqlite::Connection::open_with_flags(
             db_path,
             rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
-        ).ok()?;
+        )
+        .ok()?;
 
         // Check freshness: most recent scan result must be <24h old.
         let latest_ts: Option<String> = conn
@@ -57,7 +60,9 @@ impl DiskAudit {
         // Build query.
         let min_kb = min_size_mb.map(|mb| mb * 1024.0).unwrap_or(0.0);
 
-        let (sql, params): (String, Vec<Box<dyn rusqlite::types::ToSql>>) = if let Some(prefix) = target {
+        let (sql, params): (String, Vec<Box<dyn rusqlite::types::ToSql>>) = if let Some(prefix) =
+            target
+        {
             let expanded = expand_tilde(prefix);
             (
                 "SELECT path, key, value_num FROM system_scan_results WHERE scan_type = 'disk' AND value_num >= ?1 AND path LIKE ?2 ORDER BY value_num DESC LIMIT 50".to_string(),
@@ -70,7 +75,8 @@ impl DiskAudit {
             )
         };
 
-        let param_refs: Vec<&dyn rusqlite::types::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        let param_refs: Vec<&dyn rusqlite::types::ToSql> =
+            params.iter().map(|p| p.as_ref()).collect();
         let mut stmt = conn.prepare(&sql).ok()?;
         let rows = stmt
             .query_map(param_refs.as_slice(), |row| {
@@ -86,9 +92,8 @@ impl DiskAudit {
         for (path, label, size) in rows.flatten() {
             let size_kb = size.unwrap_or(0.0) as u64;
             if size_kb > 0 {
-                let display_label = label.unwrap_or_else(|| {
-                    path.rsplit('/').next().unwrap_or(&path).to_string()
-                });
+                let display_label =
+                    label.unwrap_or_else(|| path.rsplit('/').next().unwrap_or(&path).to_string());
                 results.push((display_label, path, size_kb));
             }
         }
@@ -106,18 +111,12 @@ const SCAN_TARGETS: &[(&str, &str)] = &[
     ("~/Library/Caches", "System & App Caches"),
     ("~/Downloads", "Downloads"),
     ("~/.Trash", "Trash"),
-    (
-        "~/Library/Developer/Xcode/DerivedData",
-        "Xcode DerivedData",
-    ),
+    ("~/Library/Developer/Xcode/DerivedData", "Xcode DerivedData"),
     (
         "~/Library/Application Support/MobileSync/Backup",
         "iOS Device Backups",
     ),
-    (
-        "~/Library/Containers/com.docker.docker",
-        "Docker Data",
-    ),
+    ("~/Library/Containers/com.docker.docker", "Docker Data"),
     ("~/Library/Caches/Homebrew", "Homebrew Cache"),
     ("~/.npm", "npm Cache"),
     ("~/.yarn/cache", "Yarn Cache"),
@@ -132,10 +131,7 @@ const SCAN_TARGETS: &[(&str, &str)] = &[
         "~/Library/Developer/Xcode/iOS DeviceSupport",
         "Xcode iOS Device Support",
     ),
-    (
-        "~/Library/Developer/Xcode/Archives",
-        "Xcode Archives",
-    ),
+    ("~/Library/Developer/Xcode/Archives", "Xcode Archives"),
     (
         "~/Library/Developer/CoreSimulator/Devices",
         "iOS Simulator Runtimes",
@@ -146,10 +142,7 @@ const SCAN_TARGETS: &[(&str, &str)] = &[
 
 /// Get the size of a directory in bytes using `du -sk`.
 fn dir_size_kb(path: &str) -> Option<u64> {
-    let output = Command::new("du")
-        .args(["-sk", path])
-        .output()
-        .ok()?;
+    let output = Command::new("du").args(["-sk", path]).output().ok()?;
 
     if !output.status.success() {
         return None;
@@ -178,7 +171,12 @@ fn format_size(kb: u64) -> String {
 /// NOTE: mirrored in scanner/disk.rs and diagnostics.rs::
 /// TCC_PROTECTED_PATH_FRAGMENTS. Keep all three in sync.
 const MACOS_PRIVATE_DIRS: &[&str] = &[
-    "music", "pictures", "photos", "movies", "desktop", "documents",
+    "music",
+    "pictures",
+    "photos",
+    "movies",
+    "desktop",
+    "documents",
     "downloads", // TCC-gated since macOS 12 — separate Files & Folders entitlement
 ];
 
@@ -269,7 +267,11 @@ impl Tool for DiskAudit {
 
         // Try cached results first.
         if let Some((cached_results, scanned_at)) = self.try_cached_results(target, min_size_mb) {
-            return build_output(cached_results, Some("(from background scan)"), scanned_at.as_deref());
+            return build_output(
+                cached_results,
+                Some("(from background scan)"),
+                scanned_at.as_deref(),
+            );
         }
 
         // If target is specified but no cache, run du on that specific directory.
@@ -306,7 +308,11 @@ impl Tool for DiskAudit {
             }
 
             results.sort_by_key(|b| std::cmp::Reverse(b.2));
-            return build_output(results, Some(&format!("(live scan of {})", target_dir)), None);
+            return build_output(
+                results,
+                Some(&format!("(live scan of {})", target_dir)),
+                None,
+            );
         }
 
         // Fallback: scan known directories (original behavior).
@@ -331,7 +337,10 @@ impl Tool for DiskAudit {
             .ok()
             .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
             .unwrap_or_default();
-        let snapshot_count = tm_output.lines().filter(|l| l.contains("com.apple.TimeMachine")).count();
+        let snapshot_count = tm_output
+            .lines()
+            .filter(|l| l.contains("com.apple.TimeMachine"))
+            .count();
 
         results.sort_by_key(|b| std::cmp::Reverse(b.2));
 
@@ -398,10 +407,7 @@ fn build_output(
     let total_kb: u64 = results.iter().map(|(_, _, kb)| kb).sum();
 
     let mut output_lines = Vec::new();
-    let mut header = format!(
-        "=== Disk Space Audit ===\nTotal: {}",
-        format_size(total_kb)
-    );
+    let mut header = format!("=== Disk Space Audit ===\nTotal: {}", format_size(total_kb));
     if let Some(note) = source_note {
         header.push_str(&format!("  {}", note));
     }

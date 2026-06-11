@@ -87,30 +87,52 @@ fn is_macos_private(path: &str, home: &str) -> bool {
 fn categorize_path(path: &str) -> &'static str {
     let lower = path.to_lowercase();
 
-    if lower.contains("/caches/") || lower.contains("/.cache/") || lower.contains("/cache/") || lower.contains("/tmp/") || lower.contains("/var/folders/") {
+    if lower.contains("/caches/")
+        || lower.contains("/.cache/")
+        || lower.contains("/cache/")
+        || lower.contains("/tmp/")
+        || lower.contains("/var/folders/")
+    {
         return "cache";
     }
-    if lower.contains("node_modules") || lower.contains("/target/debug") || lower.contains("/target/release")
-        || lower.contains("deriveddata") || lower.contains("/.gradle/") || lower.contains("/build/")
-        || lower.contains("/.venv/") || lower.contains("__pycache__")
+    if lower.contains("node_modules")
+        || lower.contains("/target/debug")
+        || lower.contains("/target/release")
+        || lower.contains("deriveddata")
+        || lower.contains("/.gradle/")
+        || lower.contains("/build/")
+        || lower.contains("/.venv/")
+        || lower.contains("__pycache__")
     {
         return "build_artifact";
     }
     if lower.contains("/downloads") {
         return "download";
     }
-    if lower.contains("/.npm") || lower.contains("/.cargo/registry") || lower.contains("/.yarn/cache")
-        || lower.contains("/homebrew/") || lower.contains("/.nuget/") || lower.contains("/pip/")
+    if lower.contains("/.npm")
+        || lower.contains("/.cargo/registry")
+        || lower.contains("/.yarn/cache")
+        || lower.contains("/homebrew/")
+        || lower.contains("/.nuget/")
+        || lower.contains("/pip/")
     {
         return "package_cache";
     }
-    if lower.contains("mobilesync/backup") || lower.contains("/.trash") || lower.contains("/trash/") {
+    if lower.contains("mobilesync/backup") || lower.contains("/.trash") || lower.contains("/trash/")
+    {
         return "backup";
     }
-    if lower.contains("coresimulator") || lower.contains("ios devicesupport") || lower.contains("docker") {
+    if lower.contains("coresimulator")
+        || lower.contains("ios devicesupport")
+        || lower.contains("docker")
+    {
         return "devtools";
     }
-    if lower.contains("/movies/") || lower.contains("/music/") || lower.contains("/pictures/") || lower.contains("/photos") {
+    if lower.contains("/movies/")
+        || lower.contains("/music/")
+        || lower.contains("/pictures/")
+        || lower.contains("/photos")
+    {
         return "media";
     }
 
@@ -177,7 +199,11 @@ impl DiskScanner {
         if let Some(out) = output {
             let s = String::from_utf8_lossy(&out.stdout);
             // Format: "{ 1.23 4.56 7.89 }"
-            let parts: Vec<&str> = s.trim().trim_matches(|c| c == '{' || c == '}').split_whitespace().collect();
+            let parts: Vec<&str> = s
+                .trim()
+                .trim_matches(|c| c == '{' || c == '}')
+                .split_whitespace()
+                .collect();
             if let Some(first) = parts.first() {
                 return first.parse::<f64>().unwrap_or(0.0);
             }
@@ -361,7 +387,11 @@ impl Scanner for DiskScanner {
         let progress_pct = if state.total_top_level > 0 {
             ((state.completed_top_level as f64 / state.total_top_level as f64) * 100.0) as i32
         } else {
-            if done { 100 } else { 0 }
+            if done {
+                100
+            } else {
+                0
+            }
         };
 
         let detail = if done {
@@ -408,7 +438,12 @@ mod tests {
     fn tcc_blocks_home_private_dirs() {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/testuser".into());
         for dir in &[
-            "Music", "Pictures", "Photos", "Movies", "Desktop", "Documents",
+            "Music",
+            "Pictures",
+            "Photos",
+            "Movies",
+            "Desktop",
+            "Documents",
             "Downloads", // TCC-gated on macOS 12+
         ] {
             let path = format!("{}/{}", home, dir);

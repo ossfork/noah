@@ -123,7 +123,10 @@ impl Tool for WinAppLogs {
             .map(|o| {
                 let stdout = String::from_utf8_lossy(&o.stdout).to_string();
                 if stdout.trim().is_empty() {
-                    format!("No event log entries found for '{}' in the last {}.", app_name, duration)
+                    format!(
+                        "No event log entries found for '{}' in the last {}.",
+                        app_name, duration
+                    )
                 } else {
                     let lines: Vec<&str> = stdout.lines().collect();
                     if lines.len() > 100 {
@@ -222,8 +225,10 @@ impl Tool for WinAppDataLs {
 
         let output = format!(
             "=== Roaming AppData ({}) ===\n{}\n\n=== Local AppData ({}) ===\n{}",
-            roaming_dir, roaming_ls.trim(),
-            local_dir, local_ls.trim()
+            roaming_dir,
+            roaming_ls.trim(),
+            local_dir,
+            local_ls.trim()
         );
 
         Ok(ToolResult::read_only(
@@ -290,7 +295,8 @@ impl Tool for WinClearAppCache {
         // Get size before clearing
         let before_size = super::hidden_cmd("powershell")
             .args([
-                "-NoProfile", "-Command",
+                "-NoProfile",
+                "-Command",
                 &format!(
                     "$size = (Get-ChildItem '{}' -Recurse -ErrorAction SilentlyContinue | \
                     Measure-Object -Property Length -Sum -ErrorAction SilentlyContinue).Sum; \
@@ -303,12 +309,19 @@ impl Tool for WinClearAppCache {
             .unwrap_or_else(|_| "unknown".to_string());
 
         // Create backup and move
-        let backup_dir = format!("{}\\..\\..\\..\\Temp\\.noah_backup_{}", localappdata, app_name);
+        let backup_dir = format!(
+            "{}\\..\\..\\..\\Temp\\.noah_backup_{}",
+            localappdata, app_name
+        );
 
         let output = super::hidden_cmd("powershell")
             .args([
-                "-NoProfile", "-Command",
-                &format!("Move-Item -Path '{}' -Destination '{}' -Force", cache_dir, backup_dir),
+                "-NoProfile",
+                "-Command",
+                &format!(
+                    "Move-Item -Path '{}' -Destination '{}' -Force",
+                    cache_dir, backup_dir
+                ),
             ])
             .output()
             .map(|o| {
@@ -395,12 +408,20 @@ impl Tool for WinMoveFile {
             .ok_or_else(|| anyhow::anyhow!("Missing required parameter: destination"))?;
         let operation = input["operation"].as_str().unwrap_or("move");
 
-        let cmdlet = if operation == "copy" { "Copy-Item" } else { "Move-Item" };
+        let cmdlet = if operation == "copy" {
+            "Copy-Item"
+        } else {
+            "Move-Item"
+        };
 
         let output = super::hidden_cmd("powershell")
             .args([
-                "-NoProfile", "-Command",
-                &format!("{} -Path '{}' -Destination '{}' -Force -Recurse", cmdlet, source, destination),
+                "-NoProfile",
+                "-Command",
+                &format!(
+                    "{} -Path '{}' -Destination '{}' -Force -Recurse",
+                    cmdlet, source, destination
+                ),
             ])
             .output()
             .map(|o| {

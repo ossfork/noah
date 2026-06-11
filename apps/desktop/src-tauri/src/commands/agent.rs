@@ -200,14 +200,25 @@ fn parse_assistant_ui_json(text: &str) -> Option<AssistantUiPayload> {
         "done" | "info" => {
             let summary = v.get("summary")?.as_str()?.to_string();
             Some(if kind == "done" {
-                AssistantUiPayload::Done(AssistantInfoUi { kind, summary, progress })
+                AssistantUiPayload::Done(AssistantInfoUi {
+                    kind,
+                    summary,
+                    progress,
+                })
             } else {
-                AssistantUiPayload::Info(AssistantInfoUi { kind, summary, progress })
+                AssistantUiPayload::Info(AssistantInfoUi {
+                    kind,
+                    summary,
+                    progress,
+                })
             })
         }
         "spa" => {
             let situation = v.get("situation")?.as_str()?.to_string();
-            let plan = v.get("plan").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let plan = v
+                .get("plan")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             // Structured findings + steps — round-trip from the model
             // without re-validating shape (the orchestrator's ui_payload
             // builder already enforced schema before this string was
@@ -231,17 +242,17 @@ fn parse_assistant_ui_json(text: &str) -> Option<AssistantUiPayload> {
                     _ => None,
                 })
                 .unwrap_or(AssistantActionType::RunStep);
-            let qr_data = v.get("qr_data").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let qr_data = v
+                .get("qr_data")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             Some(AssistantUiPayload::Spa(AssistantSpaUi {
                 kind: "spa".to_string(),
                 situation,
                 findings,
                 steps,
                 plan,
-                action: AssistantCardAction {
-                    label,
-                    action_type,
-                },
+                action: AssistantCardAction { label, action_type },
                 progress,
                 qr_data,
             }))
@@ -255,34 +266,39 @@ fn parse_assistant_ui_json(text: &str) -> Option<AssistantUiPayload> {
                         .filter_map(|q| {
                             let question = q.get("question")?.as_str()?.to_string();
                             let header = q.get("header")?.as_str()?.to_string();
-                            let multi_select = q
-                                .get("multiSelect")
-                                .and_then(|v| v.as_bool());
+                            let multi_select = q.get("multiSelect").and_then(|v| v.as_bool());
 
-                            let options = q
-                                .get("options")
-                                .and_then(|o| o.as_array())
-                                .map(|opts| {
-                                    opts.iter()
-                                        .filter_map(|o| {
-                                            Some(AssistantQuestionOption {
-                                                label: o.get("label")?.as_str()?.to_string(),
-                                                description: o.get("description")?.as_str()?.to_string(),
-                                            })
+                            let options = q.get("options").and_then(|o| o.as_array()).map(|opts| {
+                                opts.iter()
+                                    .filter_map(|o| {
+                                        Some(AssistantQuestionOption {
+                                            label: o.get("label")?.as_str()?.to_string(),
+                                            description: o
+                                                .get("description")?
+                                                .as_str()?
+                                                .to_string(),
                                         })
-                                        .collect::<Vec<_>>()
-                                });
+                                    })
+                                    .collect::<Vec<_>>()
+                            });
 
-                            let text_input = q.get("text_input").map(|ti| {
-                                AssistantTextInput {
-                                    placeholder: ti.get("placeholder").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                                    default: ti.get("default").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                                }
+                            let text_input = q.get("text_input").map(|ti| AssistantTextInput {
+                                placeholder: ti
+                                    .get("placeholder")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string()),
+                                default: ti
+                                    .get("default")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string()),
                             });
 
                             let secure_input = q.get("secure_input").and_then(|si| {
                                 Some(AssistantSecureInput {
-                                    placeholder: si.get("placeholder").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                    placeholder: si
+                                        .get("placeholder")
+                                        .and_then(|v| v.as_str())
+                                        .map(|s| s.to_string()),
                                     secret_name: si.get("secret_name")?.as_str()?.to_string(),
                                 })
                             });
@@ -369,7 +385,9 @@ async fn run_agent_turn(
         let conn = state.db.lock().await;
         let confirmation = is_confirmation.unwrap_or(false);
         if confirmation {
-            if let Err(e) = journal::save_message_with_flags(&conn, &session_id, "user", &message, false, true) {
+            if let Err(e) =
+                journal::save_message_with_flags(&conn, &session_id, "user", &message, false, true)
+            {
                 eprintln!("[warn] Failed to persist user confirmation message: {}", e);
             }
             if let Err(e) = journal::mark_last_action_taken(&conn, &session_id) {
@@ -518,10 +536,7 @@ pub async fn approve_action(
 }
 
 #[tauri::command]
-pub async fn deny_action(
-    state: State<'_, AppState>,
-    approval_id: String,
-) -> Result<bool, String> {
+pub async fn deny_action(state: State<'_, AppState>, approval_id: String) -> Result<bool, String> {
     let mut pending = state.pending_approvals.lock().await;
     if let Some(sender) = pending.remove(&approval_id) {
         let _ = sender.send(false);
@@ -795,7 +810,14 @@ mod tests {
             Some(AssistantUiPayload::UserQuestion(q)) => {
                 assert_eq!(q.questions.len(), 1);
                 assert_eq!(q.questions[0].header, "Choose Setup Approach");
-                assert_eq!(q.questions[0].options.as_ref().expect("should have options").len(), 2);
+                assert_eq!(
+                    q.questions[0]
+                        .options
+                        .as_ref()
+                        .expect("should have options")
+                        .len(),
+                    2
+                );
             }
             _ => panic!("expected user_question ui, got {:?}", ui),
         }

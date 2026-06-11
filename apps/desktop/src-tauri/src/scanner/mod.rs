@@ -96,9 +96,17 @@ impl ScannerManager {
 
             // Check if paused.
             {
-                let Ok(paused) = self.pause_requested.lock() else { continue };
+                let Ok(paused) = self.pause_requested.lock() else {
+                    continue;
+                };
                 if paused.contains(&scan_type) {
-                    self.emit_progress(&scan_type, scanner.display_name(), "paused", 0, "Paused by user");
+                    self.emit_progress(
+                        &scan_type,
+                        scanner.display_name(),
+                        "paused",
+                        0,
+                        "Paused by user",
+                    );
                     continue;
                 }
             }
@@ -112,7 +120,11 @@ impl ScannerManager {
                             if let Ok(completed) = chrono::DateTime::parse_from_rfc3339(ts) {
                                 let elapsed = chrono::Utc::now() - completed.to_utc();
                                 if elapsed < chrono::Duration::hours(1) {
-                                    eprintln!("[scanner] {} skipped: completed {}m ago", scan_type, elapsed.num_minutes());
+                                    eprintln!(
+                                        "[scanner] {} skipped: completed {}m ago",
+                                        scan_type,
+                                        elapsed.num_minutes()
+                                    );
                                     continue;
                                 }
                             }
@@ -124,14 +136,22 @@ impl ScannerManager {
             // Check system load.
             if !scanner.is_system_idle() {
                 eprintln!("[scanner] {} skipped: system busy", scan_type);
-                self.emit_progress(&scan_type, scanner.display_name(), "skipped", 0, "System busy");
+                self.emit_progress(
+                    &scan_type,
+                    scanner.display_name(),
+                    "skipped",
+                    0,
+                    "System busy",
+                );
                 continue;
             }
 
             // Create or update the scan job record.
             let job_id = {
                 let conn = self.db.lock().await;
-                let existing = journal::get_latest_scan_job(&conn, &scan_type).ok().flatten();
+                let existing = journal::get_latest_scan_job(&conn, &scan_type)
+                    .ok()
+                    .flatten();
                 let job_id = existing
                     .as_ref()
                     .filter(|j| j.status == "running" || j.status == "paused")
@@ -146,7 +166,10 @@ impl ScannerManager {
                     progress_pct: existing.as_ref().map(|j| j.progress_pct).unwrap_or(0),
                     progress_detail: Some("Starting...".to_string()),
                     budget_secs: Some(budget_per_scanner.as_secs() as i32),
-                    started_at: existing.as_ref().and_then(|j| j.started_at.clone()).or_else(|| Some(now.clone())),
+                    started_at: existing
+                        .as_ref()
+                        .and_then(|j| j.started_at.clone())
+                        .or_else(|| Some(now.clone())),
                     updated_at: Some(now),
                     completed_at: None,
                     config: existing.as_ref().and_then(|j| j.config.clone()),
@@ -155,7 +178,13 @@ impl ScannerManager {
                 job_id
             };
 
-            self.emit_progress(&scan_type, scanner.display_name(), "running", 0, "Starting...");
+            self.emit_progress(
+                &scan_type,
+                scanner.display_name(),
+                "running",
+                0,
+                "Starting...",
+            );
 
             // Run the tick.
             let progress = {
@@ -184,7 +213,13 @@ impl ScannerManager {
                         config: None,
                     };
                     let _ = journal::upsert_scan_job(&conn, &job);
-                    self.emit_progress(&scan_type, scanner.display_name(), "completed", p.progress_pct, &p.detail);
+                    self.emit_progress(
+                        &scan_type,
+                        scanner.display_name(),
+                        "completed",
+                        p.progress_pct,
+                        &p.detail,
+                    );
                 }
                 Err(e) => {
                     eprintln!("[scanner] {} tick failed: {}", scan_type, e);
@@ -201,7 +236,13 @@ impl ScannerManager {
                         config: None,
                     };
                     let _ = journal::upsert_scan_job(&conn, &job);
-                    self.emit_progress(&scan_type, scanner.display_name(), "failed", 0, &format!("Error: {}", e));
+                    self.emit_progress(
+                        &scan_type,
+                        scanner.display_name(),
+                        "failed",
+                        0,
+                        &format!("Error: {}", e),
+                    );
                 }
             }
         }
@@ -210,7 +251,9 @@ impl ScannerManager {
     /// Check if an on-demand scan was requested and run it with higher budget.
     pub async fn run_triggered(&self) {
         let requested = {
-            let Ok(mut trigger) = self.trigger_requested.lock() else { return };
+            let Ok(mut trigger) = self.trigger_requested.lock() else {
+                return;
+            };
             trigger.take()
         };
 
@@ -237,7 +280,13 @@ impl ScannerManager {
                         config: None,
                     };
                     let _ = journal::upsert_scan_job(&conn, &job);
-                    self.emit_progress(&scan_type, scanner.display_name(), "running", 0, "On-demand scan starting...");
+                    self.emit_progress(
+                        &scan_type,
+                        scanner.display_name(),
+                        "running",
+                        0,
+                        "On-demand scan starting...",
+                    );
 
                     match scanner.tick(budget, &conn) {
                         Ok(p) => {
@@ -256,7 +305,13 @@ impl ScannerManager {
                                 config: None,
                             };
                             let _ = journal::upsert_scan_job(&conn, &job);
-                            self.emit_progress(&scan_type, scanner.display_name(), status, p.progress_pct, &p.detail);
+                            self.emit_progress(
+                                &scan_type,
+                                scanner.display_name(),
+                                status,
+                                p.progress_pct,
+                                &p.detail,
+                            );
                         }
                         Err(e) => {
                             eprintln!("[scanner] on-demand {} failed: {}", scan_type, e);
@@ -274,7 +329,13 @@ impl ScannerManager {
                                 config: None,
                             };
                             let _ = journal::upsert_scan_job(&conn, &job);
-                            self.emit_progress(&scan_type, scanner.display_name(), "failed", 0, &format!("Error: {}", e));
+                            self.emit_progress(
+                                &scan_type,
+                                scanner.display_name(),
+                                "failed",
+                                0,
+                                &format!("Error: {}", e),
+                            );
                         }
                     }
                     break;
@@ -283,7 +344,14 @@ impl ScannerManager {
         }
     }
 
-    fn emit_progress(&self, scan_type: &str, display_name: &str, status: &str, pct: i32, detail: &str) {
+    fn emit_progress(
+        &self,
+        scan_type: &str,
+        display_name: &str,
+        status: &str,
+        pct: i32,
+        detail: &str,
+    ) {
         if let Some(ref handle) = self.app_handle {
             let payload = ScanProgressEvent {
                 scan_type: scan_type.to_string(),

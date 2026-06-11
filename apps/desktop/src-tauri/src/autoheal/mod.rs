@@ -55,7 +55,12 @@ impl AutoHealMonitor {
         app_handle: tauri::AppHandle,
         app_dir: PathBuf,
     ) -> Self {
-        Self { llm, db, app_handle, app_dir }
+        Self {
+            llm,
+            db,
+            app_handle,
+            app_dir,
+        }
     }
 
     /// Run forever: 10 min initial delay (offset from scanner), then every 6 hours.
@@ -101,7 +106,9 @@ impl AutoHealMonitor {
             let mut failures = Vec::new();
             let scan_types = ["security", "updates", "backups", "performance", "network"];
             for scan_type in &scan_types {
-                if let Ok(results) = journal::query_scan_results(&conn, scan_type, None, None, None, 100) {
+                if let Ok(results) =
+                    journal::query_scan_results(&conn, scan_type, None, None, None, 100)
+                {
                     for r in results {
                         if r.value_text.as_deref() != Some("pass") {
                             failures.push(r);
@@ -127,15 +134,13 @@ impl AutoHealMonitor {
                     let check_id = check.path.as_deref().unwrap_or("");
                     let key = format!("autoheal_attempted:{}", check_id);
                     match journal::get_setting(&conn, &key) {
-                        Ok(Some(ts)) => {
-                            match chrono::DateTime::parse_from_rfc3339(&ts) {
-                                Ok(attempted_at) => {
-                                    let elapsed = now - attempted_at.to_utc();
-                                    elapsed >= chrono::Duration::hours(24)
-                                }
-                                Err(_) => true,
+                        Ok(Some(ts)) => match chrono::DateTime::parse_from_rfc3339(&ts) {
+                            Ok(attempted_at) => {
+                                let elapsed = now - attempted_at.to_utc();
+                                elapsed >= chrono::Duration::hours(24)
                             }
-                        }
+                            Err(_) => true,
+                        },
                         _ => true,
                     }
                 })
@@ -150,21 +155,22 @@ impl AutoHealMonitor {
         eprintln!("[autoheal] {} actionable failing checks", actionable.len());
 
         // Build failing checks JSON for triage.
-        let checks_json: Vec<serde_json::Value> = actionable.iter().map(|c| {
-            serde_json::json!({
-                "check_id": c.path,
-                "label": c.key,
-                "status": c.value_text,
-                "detail": c.metadata,
-                "scan_type": c.scan_type,
+        let checks_json: Vec<serde_json::Value> = actionable
+            .iter()
+            .map(|c| {
+                serde_json::json!({
+                    "check_id": c.path,
+                    "label": c.key,
+                    "status": c.value_text,
+                    "detail": c.metadata,
+                    "scan_type": c.scan_type,
+                })
             })
-        }).collect();
+            .collect();
         let failing_json = serde_json::to_string_pretty(&checks_json)?;
 
         // Build playbook list from knowledge dir.
-        let playbooks_dir = self.app_dir
-            .join("knowledge")
-            .join("playbooks");
+        let playbooks_dir = self.app_dir.join("knowledge").join("playbooks");
         let playbook_list = list_playbook_slugs(&playbooks_dir);
         let playbooks_json = serde_json::to_string_pretty(&playbook_list)?;
 
@@ -174,14 +180,20 @@ impl AutoHealMonitor {
         }
 
         // Call LLM triage.
-        let triage = self.llm.triage_health_issues(&failing_json, &playbooks_json).await?;
+        let triage = self
+            .llm
+            .triage_health_issues(&failing_json, &playbooks_json)
+            .await?;
 
         if !triage.should_heal || triage.playbook_slug.is_empty() {
             eprintln!("[autoheal] triage decided not to heal");
             return Ok(());
         }
 
-        eprintln!("[autoheal] triage picked: {} for check {}", triage.playbook_slug, triage.check_id);
+        eprintln!(
+            "[autoheal] triage picked: {} for check {}",
+            triage.playbook_slug, triage.check_id
+        );
 
         // Per-category policy check: if fleet policy specifies auto_heal for this category,
         // that overrides the global auto_heal_enabled setting.
@@ -190,23 +202,27 @@ impl AutoHealMonitor {
             .and_then(|p| crate::fleet_policy::should_auto_heal(&p, category));
 
         let effective_auto_heal = match policy_auto_heal {
-            Some(val) => val,  // Policy explicitly says yes or no for this category
-            None => auto_heal_on,  // No policy rule — fall back to global toggle
+            Some(val) => val,     // Policy explicitly says yes or no for this category
+            None => auto_heal_on, // No policy rule — fall back to global toggle
         };
 
         if !effective_auto_heal {
             // Emit notification that auto-heal is available but off.
-            let _ = self.app_handle.emit("auto-heal-available", AutoHealAvailablePayload {
-                check_id: triage.check_id.clone(),
-                playbook_slug: triage.playbook_slug.clone(),
-                reason: triage.reason.clone(),
-            });
+            let _ = self.app_handle.emit(
+                "auto-heal-available",
+                AutoHealAvailablePayload {
+                    check_id: triage.check_id.clone(),
+                    playbook_slug: triage.playbook_slug.clone(),
+                    reason: triage.reason.clone(),
+                },
+            );
             eprintln!("[autoheal] auto-heal is OFF, emitted availability notification");
             return Ok(());
         }
 
         // Run the playbook.
-        self.run_playbook(&triage.playbook_slug, &triage.check_id, &triage.reason).await
+        self.run_playbook(&triage.playbook_slug, &triage.check_id, &triage.reason)
+            .await
     }
 
     /// Execute a playbook for a failing check.
@@ -231,27 +247,33 @@ impl AutoHealMonitor {
         // Record the run.
         {
             let conn = self.db.lock().await;
-            journal::insert_auto_heal_run(&conn, &journal::AutoHealRun {
-                id: run_id.clone(),
-                check_id: check_id.to_string(),
-                playbook_slug: slug.to_string(),
-                session_id: None,
-                triage_reason: Some(reason.to_string()),
-                started_at: now.to_rfc3339(),
-                completed_at: None,
-                success: false,
-                score_before,
-                score_after: None,
-                error_message: None,
-            })?;
+            journal::insert_auto_heal_run(
+                &conn,
+                &journal::AutoHealRun {
+                    id: run_id.clone(),
+                    check_id: check_id.to_string(),
+                    playbook_slug: slug.to_string(),
+                    session_id: None,
+                    triage_reason: Some(reason.to_string()),
+                    started_at: now.to_rfc3339(),
+                    completed_at: None,
+                    success: false,
+                    score_before,
+                    score_after: None,
+                    error_message: None,
+                },
+            )?;
         }
 
         // Emit started event.
-        let _ = self.app_handle.emit("auto-heal-started", AutoHealPayload {
-            check_id: check_id.to_string(),
-            playbook_slug: slug.to_string(),
-            reason: reason.to_string(),
-        });
+        let _ = self.app_handle.emit(
+            "auto-heal-started",
+            AutoHealPayload {
+                check_id: check_id.to_string(),
+                playbook_slug: slug.to_string(),
+                reason: reason.to_string(),
+            },
+        );
 
         // Create session and run playbook via AppState.
         let state = self.app_handle.state::<crate::AppState>();
@@ -261,15 +283,22 @@ impl AutoHealMonitor {
             session_id = orch.create_session();
 
             // Set trigger context for playbook run tracking.
-            orch.set_trigger_context(&session_id, crate::playbooks::TriggerContext {
-                trigger: "auto_heal".to_string(),
-                check_id: Some(check_id.to_string()),
-                score_before,
-            });
+            orch.set_trigger_context(
+                &session_id,
+                crate::playbooks::TriggerContext {
+                    trigger: "auto_heal".to_string(),
+                    check_id: Some(check_id.to_string()),
+                    score_before,
+                },
+            );
 
-            let os_name = if cfg!(target_os = "macos") { "macOS" }
-                else if cfg!(target_os = "windows") { "Windows" }
-                else { "Linux" };
+            let os_name = if cfg!(target_os = "macos") {
+                "macOS"
+            } else if cfg!(target_os = "windows") {
+                "Windows"
+            } else {
+                "Linux"
+            };
 
             let message = format!(
                 "activate_playbook {}\n\nRun all steps autonomously. The health check '{}' is failing. \
@@ -279,7 +308,8 @@ impl AutoHealMonitor {
                 slug, check_id, os_name,
             );
 
-            orch.send_message(&session_id, &message, &self.app_handle, &self.db).await
+            orch.send_message(&session_id, &message, &self.app_handle, &self.db)
+                .await
         };
 
         let completed_at = chrono::Utc::now().to_rfc3339();
@@ -319,36 +349,71 @@ impl AutoHealMonitor {
             let rescan_app_dir = self.app_dir.clone();
             match tokio::task::spawn_blocking(move || -> Option<i32> {
                 let conn = rescan_db.blocking_lock();
-                let enabled = crate::commands::health::enabled_categories_from_config(&rescan_app_dir);
+                let enabled =
+                    crate::commands::health::enabled_categories_from_config(&rescan_app_dir);
                 let budget = std::time::Duration::from_secs(30);
 
                 // Re-run scanners to get fresh results.
+                use crate::commands::health::should_scan;
+                use crate::scanner::backups::BackupScanner;
+                use crate::scanner::network::NetworkScanner;
+                use crate::scanner::performance::PerformanceScanner;
                 use crate::scanner::security::SecurityScanner;
                 use crate::scanner::updates::UpdateScanner;
-                use crate::scanner::backups::BackupScanner;
-                use crate::scanner::performance::PerformanceScanner;
-                use crate::scanner::network::NetworkScanner;
                 use crate::scanner::Scanner;
                 use noah_health::Category;
-                use crate::commands::health::should_scan;
 
-                if should_scan(&enabled, Category::Security) { let _ = SecurityScanner.tick(budget, &conn); }
-                if should_scan(&enabled, Category::Updates) { let _ = UpdateScanner.tick(budget, &conn); }
-                if should_scan(&enabled, Category::Backups) { let _ = BackupScanner.tick(budget, &conn); }
-                if should_scan(&enabled, Category::Performance) { let _ = PerformanceScanner.tick(budget, &conn); }
-                if should_scan(&enabled, Category::Network) { let _ = NetworkScanner.tick(budget, &conn); }
+                if should_scan(&enabled, Category::Security) {
+                    let _ = SecurityScanner.tick(budget, &conn);
+                }
+                if should_scan(&enabled, Category::Updates) {
+                    let _ = UpdateScanner.tick(budget, &conn);
+                }
+                if should_scan(&enabled, Category::Backups) {
+                    let _ = BackupScanner.tick(budget, &conn);
+                }
+                if should_scan(&enabled, Category::Performance) {
+                    let _ = PerformanceScanner.tick(budget, &conn);
+                }
+                if should_scan(&enabled, Category::Network) {
+                    let _ = NetworkScanner.tick(budget, &conn);
+                }
 
                 let mut all_checks = Vec::new();
-                all_checks.extend(crate::commands::health::checks_from_scan_results(&conn, "security", Category::Security));
-                all_checks.extend(crate::commands::health::checks_from_scan_results(&conn, "updates", Category::Updates));
-                all_checks.extend(crate::commands::health::checks_from_scan_results(&conn, "backups", Category::Backups));
-                all_checks.extend(crate::commands::health::checks_from_scan_results(&conn, "performance", Category::Performance));
-                all_checks.extend(crate::commands::health::checks_from_scan_results(&conn, "network", Category::Network));
+                all_checks.extend(crate::commands::health::checks_from_scan_results(
+                    &conn,
+                    "security",
+                    Category::Security,
+                ));
+                all_checks.extend(crate::commands::health::checks_from_scan_results(
+                    &conn,
+                    "updates",
+                    Category::Updates,
+                ));
+                all_checks.extend(crate::commands::health::checks_from_scan_results(
+                    &conn,
+                    "backups",
+                    Category::Backups,
+                ));
+                all_checks.extend(crate::commands::health::checks_from_scan_results(
+                    &conn,
+                    "performance",
+                    Category::Performance,
+                ));
+                all_checks.extend(crate::commands::health::checks_from_scan_results(
+                    &conn,
+                    "network",
+                    Category::Network,
+                ));
 
-                if all_checks.is_empty() { return None; }
+                if all_checks.is_empty() {
+                    return None;
+                }
                 let score = noah_health::compute_score(all_checks, None, enabled.as_deref());
                 Some(score.overall_score as i32)
-            }).await {
+            })
+            .await
+            {
                 Ok(s) => s,
                 Err(_) => None,
             }
@@ -357,14 +422,17 @@ impl AutoHealMonitor {
         };
 
         // Emit completed event.
-        let _ = self.app_handle.emit("auto-heal-completed", AutoHealCompletePayload {
-            check_id: check_id.to_string(),
-            playbook_slug: slug.to_string(),
-            success,
-            score_before,
-            score_after,
-            error: error_message,
-        });
+        let _ = self.app_handle.emit(
+            "auto-heal-completed",
+            AutoHealCompletePayload {
+                check_id: check_id.to_string(),
+                playbook_slug: slug.to_string(),
+                success,
+                score_before,
+                score_after,
+                error: error_message,
+            },
+        );
 
         // Push playbook run report + auto-heal event to fleet if linked.
         if let Some(config) = crate::dashboard_link::DashboardConfig::load(&self.app_dir) {
@@ -376,27 +444,37 @@ impl AutoHealMonitor {
             // Extract run tracker and push playbook run report.
             let run_report = {
                 let mut orch = state.orchestrator.lock().await;
-                orch.take_run_tracker(&session_id).map(|tracker| {
-                    tracker.finalize(success, score_after, &session_id)
-                })
+                orch.take_run_tracker(&session_id)
+                    .map(|tracker| tracker.finalize(success, score_after, &session_id))
             };
 
             let config_clone = config.clone();
             tokio::spawn(async move {
                 if let Err(e) = crate::dashboard_link::push_auto_heal_event(
-                    &config, &check_id_owned, &slug_owned, sb, sa,
-                ).await {
+                    &config,
+                    &check_id_owned,
+                    &slug_owned,
+                    sb,
+                    sa,
+                )
+                .await
+                {
                     eprintln!("[autoheal] fleet push failed: {}", e);
                 }
                 if let Some(report) = run_report {
-                    if let Err(e) = crate::dashboard_link::push_playbook_run(&config_clone, &report).await {
+                    if let Err(e) =
+                        crate::dashboard_link::push_playbook_run(&config_clone, &report).await
+                    {
                         eprintln!("[autoheal] playbook run report push failed: {}", e);
                     }
                 }
             });
         }
 
-        eprintln!("[autoheal] playbook {} completed (success={})", slug, success);
+        eprintln!(
+            "[autoheal] playbook {} completed (success={})",
+            slug, success
+        );
         Ok(())
     }
 }
@@ -404,11 +482,17 @@ impl AutoHealMonitor {
 /// List playbook slugs from the playbooks directory, including source taxonomy.
 fn list_playbook_slugs(playbooks_dir: &std::path::Path) -> Vec<serde_json::Value> {
     let mut list = Vec::new();
-    let Ok(entries) = std::fs::read_dir(playbooks_dir) else { return list };
+    let Ok(entries) = std::fs::read_dir(playbooks_dir) else {
+        return list;
+    };
     for entry in entries.flatten() {
         let path = entry.path();
         if path.extension().and_then(|e| e.to_str()) == Some("md") {
-            let filename = path.file_stem().unwrap_or_default().to_string_lossy().to_string();
+            let filename = path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
             let content = std::fs::read_to_string(&path).unwrap_or_default();
 
             // Extract source from frontmatter.
@@ -431,7 +515,9 @@ fn extract_source_from_frontmatter(content: &str) -> &'static str {
         return "local";
     }
     let after_first = &trimmed[3..];
-    let Some(end) = after_first.find("\n---") else { return "local" };
+    let Some(end) = after_first.find("\n---") else {
+        return "local";
+    };
     let yaml_block = &after_first[..end];
 
     let mut source = None;

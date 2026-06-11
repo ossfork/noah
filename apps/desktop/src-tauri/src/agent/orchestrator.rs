@@ -17,7 +17,9 @@ use crate::agent::llm_client::{
 use crate::agent::prompts;
 use crate::agent::tool_router::ToolRouter;
 use crate::knowledge;
-use crate::playbooks::{PlaybookRunTracker, PlaybookSource, PlaybookState, TriggerContext, content_hash};
+use crate::playbooks::{
+    content_hash, PlaybookRunTracker, PlaybookSource, PlaybookState, TriggerContext,
+};
 use crate::safety::journal;
 use crate::ui_tools;
 
@@ -407,7 +409,12 @@ impl Orchestrator {
 
             let response = match self
                 .llm
-                .send_message(messages.clone(), tool_defs.clone(), system.clone(), Some(session_id))
+                .send_message(
+                    messages.clone(),
+                    tool_defs.clone(),
+                    system.clone(),
+                    Some(session_id),
+                )
                 .await
             {
                 Ok(response) => response,
@@ -429,7 +436,12 @@ impl Orchestrator {
                             .await?;
                         let retry_messages = self.messages_for_llm(session_id);
                         self.llm
-                            .send_message(retry_messages, tool_defs.clone(), system.clone(), Some(session_id))
+                            .send_message(
+                                retry_messages,
+                                tool_defs.clone(),
+                                system.clone(),
+                                Some(session_id),
+                            )
                             .await?
                     } else {
                         return Err(err);
@@ -558,10 +570,14 @@ impl Orchestrator {
                                 let session = self.sessions.get_mut(session_id).unwrap();
                                 let payload = if let Some(ref mut pb) = session.playbook {
                                     if let Some(progress) = pb.progress_json() {
-                                        let step_num = progress["step"].as_u64().unwrap_or(0) as u32;
-                                        let step_label = progress["label"].as_str().unwrap_or("").to_string();
+                                        let step_num =
+                                            progress["step"].as_u64().unwrap_or(0) as u32;
+                                        let step_label =
+                                            progress["label"].as_str().unwrap_or("").to_string();
                                         // Parse, inject progress, re-serialize.
-                                        let result = if let Ok(mut v) = serde_json::from_str::<Value>(&payload) {
+                                        let result = if let Ok(mut v) =
+                                            serde_json::from_str::<Value>(&payload)
+                                        {
                                             v["progress"] = progress;
                                             pb.advance();
                                             v.to_string()
@@ -628,7 +644,11 @@ impl Orchestrator {
                 let mut turn_sigs: Vec<String> = Vec::new();
                 for (_, name, input) in &tool_uses {
                     // Signature = tool name + compact JSON of input (deterministic).
-                    let sig = format!("{}:{}", name, serde_json::to_string(input).unwrap_or_default());
+                    let sig = format!(
+                        "{}:{}",
+                        name,
+                        serde_json::to_string(input).unwrap_or_default()
+                    );
                     turn_sigs.push(sig);
                 }
                 turn_sigs.sort();
@@ -644,7 +664,10 @@ impl Orchestrator {
                     emit_debug(
                         app_handle,
                         "dead_loop_detected",
-                        &format!("Breaking dead loop: same tool calls repeated 3 times: {}", &turn_key[..turn_key.len().min(200)]),
+                        &format!(
+                            "Breaking dead loop: same tool calls repeated 3 times: {}",
+                            &turn_key[..turn_key.len().min(200)]
+                        ),
                         json!({ "signature": turn_key }),
                     );
                     all_text_parts.push(
@@ -714,7 +737,11 @@ impl Orchestrator {
                                     );
                                 }
                                 let session = self.sessions.get_mut(session_id).unwrap();
-                                let total = if state.steps.is_empty() { None } else { Some(state.total_steps) };
+                                let total = if state.steps.is_empty() {
+                                    None
+                                } else {
+                                    Some(state.total_steps)
+                                };
                                 let mut tracker = PlaybookRunTracker::new(
                                     pb_name,
                                     total,
@@ -730,7 +757,9 @@ impl Orchestrator {
                         }
 
                         // Record tool call in playbook run tracker.
-                        if let Some(ref mut tracker) = self.sessions.get_mut(session_id).unwrap().run_tracker {
+                        if let Some(ref mut tracker) =
+                            self.sessions.get_mut(session_id).unwrap().run_tracker
+                        {
                             tracker.record_tool(&tool_name);
                         }
 
@@ -906,7 +935,9 @@ impl Orchestrator {
         // Fleet policy override: check if admin has defined a safety rule for this tool.
         let policy_app_dir = self.knowledge_dir.parent().unwrap_or(&self.knowledge_dir);
         if let Some(policy) = crate::fleet_policy::FleetPolicy::load(policy_app_dir) {
-            if let Some(effect) = crate::fleet_policy::resolve_safety_effect(&policy, tool_name, tool_input) {
+            if let Some(effect) =
+                crate::fleet_policy::resolve_safety_effect(&policy, tool_name, tool_input)
+            {
                 match effect {
                     crate::fleet_policy::SafetyEffect::Block => {
                         emit_debug(
@@ -915,7 +946,10 @@ impl Orchestrator {
                             &format!("Fleet policy blocked {}", tool_name),
                             json!({ "name": tool_name, "input": tool_input }),
                         );
-                        return Ok("Action blocked by fleet policy. Contact your IT administrator.".to_string());
+                        return Ok(
+                            "Action blocked by fleet policy. Contact your IT administrator."
+                                .to_string(),
+                        );
                     }
                     crate::fleet_policy::SafetyEffect::AutoApprove => {
                         // Override tier to skip approval below.
@@ -1020,11 +1054,8 @@ impl Orchestrator {
         // Noah looked at the target.
         if tool_name == "shell_run" {
             if let Some(command) = tool_input.get("command").and_then(|v| v.as_str()) {
-                let succeeded = tool_result
-                    .data
-                    .get("exit_code")
-                    .and_then(|v| v.as_i64())
-                    == Some(0);
+                let succeeded =
+                    tool_result.data.get("exit_code").and_then(|v| v.as_i64()) == Some(0);
                 if succeeded {
                     let home = std::env::var("HOME").unwrap_or_default();
                     let paths = noah_tools::safety::inspected_paths(command, &home);
@@ -1131,7 +1162,9 @@ fn detect_source_from_content(content: &str) -> PlaybookSource {
         return PlaybookSource::Local;
     }
     let after_first = &trimmed[3..];
-    let Some(end) = after_first.find("\n---") else { return PlaybookSource::Local };
+    let Some(end) = after_first.find("\n---") else {
+        return PlaybookSource::Local;
+    };
     let yaml_block = &after_first[..end];
 
     let mut source = None;
@@ -1453,10 +1486,8 @@ mod tests {
     async fn test_force_compression_falls_back_when_summary_request_fails() {
         // Point the BYOK client at an unreachable local address so the
         // summary request fails fast and the fallback path is exercised.
-        let llm = LlmClient::with_test_base_url(
-            "test-key".to_string(),
-            "http://127.0.0.1:9".to_string(),
-        );
+        let llm =
+            LlmClient::with_test_base_url("test-key".to_string(), "http://127.0.0.1:9".to_string());
         let mut orch = test_orchestrator_with_llm(llm);
         let id = orch.create_session();
         let session = orch.sessions.get_mut(&id).unwrap();

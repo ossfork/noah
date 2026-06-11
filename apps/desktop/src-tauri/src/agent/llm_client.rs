@@ -586,9 +586,13 @@ impl LlmClient {
             Respond in exactly this JSON format (no markdown, no extra text):\n\
             {\"should_heal\": true/false, \"playbook_slug\": \"slug-here\", \"check_id\": \"check.id.here\", \"reason\": \"why this playbook fixes this check\"}";
 
-        let os_name = if cfg!(target_os = "macos") { "macOS" }
-            else if cfg!(target_os = "windows") { "Windows" }
-            else { "Linux" };
+        let os_name = if cfg!(target_os = "macos") {
+            "macOS"
+        } else if cfg!(target_os = "windows") {
+            "Windows"
+        } else {
+            "Linux"
+        };
 
         let user_msg = format!(
             "Device OS: {}\n\nFailing health checks:\n{}\n\nAvailable playbooks:\n{}",
@@ -640,13 +644,12 @@ impl LlmClient {
 
         let cleaned = strip_markdown_fences(&text);
 
-        let result: TriageResult =
-            serde_json::from_str(&cleaned).unwrap_or(TriageResult {
-                should_heal: false,
-                playbook_slug: String::new(),
-                check_id: String::new(),
-                reason: String::new(),
-            });
+        let result: TriageResult = serde_json::from_str(&cleaned).unwrap_or(TriageResult {
+            should_heal: false,
+            playbook_slug: String::new(),
+            check_id: String::new(),
+            reason: String::new(),
+        });
 
         Ok(result)
     }

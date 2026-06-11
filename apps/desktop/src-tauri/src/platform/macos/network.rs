@@ -115,7 +115,11 @@ impl Tool for MacPing {
             .map(|o| {
                 let stdout = String::from_utf8_lossy(&o.stdout).to_string();
                 let stderr = String::from_utf8_lossy(&o.stderr).to_string();
-                if stdout.is_empty() { stderr } else { stdout }
+                if stdout.is_empty() {
+                    stderr
+                } else {
+                    stdout
+                }
             })
             .unwrap_or_else(|e| format!("ping failed: {}", e));
 
@@ -275,9 +279,7 @@ impl Tool for MacFlushDns {
     }
 
     async fn execute(&self, _input: &Value) -> Result<ToolResult> {
-        let output = Command::new("dscacheutil")
-            .arg("-flushcache")
-            .output();
+        let output = Command::new("dscacheutil").arg("-flushcache").output();
 
         let _ = Command::new("sudo")
             .args(["killall", "-HUP", "mDNSResponder"])

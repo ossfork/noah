@@ -119,12 +119,20 @@ struct Frontmatter {
 fn extract_frontmatter(content: &str) -> Frontmatter {
     let trimmed = content.trim_start();
     if !trimmed.starts_with("---") {
-        return Frontmatter { description: None, source: None, emoji: None };
+        return Frontmatter {
+            description: None,
+            source: None,
+            emoji: None,
+        };
     }
 
     let after_first = &trimmed[3..];
     let Some(end) = after_first.find("\n---") else {
-        return Frontmatter { description: None, source: None, emoji: None };
+        return Frontmatter {
+            description: None,
+            source: None,
+            emoji: None,
+        };
     };
     let yaml_block = &after_first[..end];
 
@@ -169,7 +177,11 @@ fn extract_frontmatter(content: &str) -> Frontmatter {
         })
     };
 
-    Frontmatter { description, source, emoji }
+    Frontmatter {
+        description,
+        source,
+        emoji,
+    }
 }
 
 /// Extract the title from the first `# ` heading line, or derive from filename.
@@ -235,7 +247,11 @@ pub fn list_knowledge_tree(
             for file_entry in dir_entries {
                 let fname = file_entry.file_name().to_string_lossy().to_string();
 
-                if file_entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
+                if file_entry
+                    .file_type()
+                    .map(|ft| ft.is_dir())
+                    .unwrap_or(false)
+                {
                     // Recurse one level into subdirectories (folder playbooks).
                     scan_subdir(&mut entries, &cat_name, &file_entry.path(), &fname);
                     continue;
@@ -271,7 +287,9 @@ pub fn list_knowledge_tree(
 
 /// Scan a subdirectory within a category (e.g. playbooks/setup-openclaw/).
 fn scan_subdir(entries: &mut Vec<KnowledgeEntry>, cat_name: &str, dir: &Path, folder_name: &str) {
-    let Ok(read_dir) = std::fs::read_dir(dir) else { return };
+    let Ok(read_dir) = std::fs::read_dir(dir) else {
+        return;
+    };
     let mut files: Vec<_> = read_dir.flatten().collect();
     files.sort_by_key(|e| e.file_name());
 
@@ -330,7 +348,8 @@ pub fn knowledge_toc(knowledge_dir: &Path) -> Result<String> {
             // Show playbooks with descriptions, deduplicating folder playbooks.
             lines.push(String::new());
             lines.push("playbooks:".to_string());
-            let mut seen_folders: std::collections::HashSet<String> = std::collections::HashSet::new();
+            let mut seen_folders: std::collections::HashSet<String> =
+                std::collections::HashSet::new();
             for entry in cat_entries {
                 // Check if this is a folder playbook sub-module (path has 3 segments).
                 let segments: Vec<&str> = entry.path.split('/').collect();
@@ -341,7 +360,8 @@ pub fn knowledge_toc(knowledge_dir: &Path) -> Result<String> {
                         continue; // Already shown this folder.
                     }
                     // Find the playbook.md entry for this folder to get its description.
-                    let desc = cat_entries.iter()
+                    let desc = cat_entries
+                        .iter()
                         .find(|e| e.path == format!("playbooks/{}/playbook.md", folder))
                         .and_then(|e| e.description.as_deref());
                     if let Some(d) = desc {
@@ -465,7 +485,9 @@ impl KnowledgeSearchTool {
 /// Returns (relative_path, absolute_path) pairs.
 fn collect_files_under(base: &Path, rel_prefix: &str) -> Vec<(String, PathBuf)> {
     let mut results = Vec::new();
-    let Ok(read_dir) = std::fs::read_dir(base) else { return results };
+    let Ok(read_dir) = std::fs::read_dir(base) else {
+        return results;
+    };
     let mut dir_entries: Vec<_> = read_dir.flatten().collect();
     dir_entries.sort_by_key(|e| e.file_name());
 
@@ -480,7 +502,9 @@ fn collect_files_under(base: &Path, rel_prefix: &str) -> Vec<(String, PathBuf)> 
             } else {
                 format!("{}/{}", rel_prefix, fname)
             };
-            let Ok(sub_dir) = std::fs::read_dir(&path) else { continue };
+            let Ok(sub_dir) = std::fs::read_dir(&path) else {
+                continue;
+            };
             let mut sub_entries: Vec<_> = sub_dir.flatten().collect();
             sub_entries.sort_by_key(|e| e.file_name());
             for sub in sub_entries {
@@ -552,10 +576,7 @@ impl Tool for KnowledgeSearchTool {
             .get("output_mode")
             .and_then(|v| v.as_str())
             .unwrap_or("files");
-        let context_lines = input
-            .get("context")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(1) as usize;
+        let context_lines = input.get("context").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
 
         let is_wildcard = pattern == "*";
         let pattern_lower = pattern.to_lowercase();
@@ -577,7 +598,9 @@ impl Tool for KnowledgeSearchTool {
         let files = collect_files_under(&search_root, &rel_prefix);
 
         match output_mode {
-            "content" => self.execute_content_mode(&files, &pattern_lower, is_wildcard, context_lines),
+            "content" => {
+                self.execute_content_mode(&files, &pattern_lower, is_wildcard, context_lines)
+            }
             _ => self.execute_files_mode(&files, &pattern_lower, is_wildcard),
         }
     }
@@ -771,7 +794,10 @@ impl Tool for KnowledgeReadTool {
             .and_then(|v| v.as_str())
             .context("Missing 'path'")?;
         let offset = input.get("offset").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
-        let limit = input.get("limit").and_then(|v| v.as_u64()).map(|v| v as usize);
+        let limit = input
+            .get("limit")
+            .and_then(|v| v.as_u64())
+            .map(|v| v as usize);
 
         let full_path = safe_resolve(&self.knowledge_dir, path)?;
 
@@ -979,7 +1005,10 @@ type: system
         let entries = list_knowledge_tree(&kdir, Some("playbooks")).unwrap();
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].source.as_deref(), Some("bundled")); // legacy type: system → bundled
-        assert_eq!(entries[0].description.as_deref(), Some("Diagnose network issues"));
+        assert_eq!(
+            entries[0].description.as_deref(),
+            Some("Diagnose network issues")
+        );
     }
 
     #[test]
@@ -1015,8 +1044,12 @@ type: system
 
         let entries = list_knowledge_tree(&kdir, Some("playbooks")).unwrap();
         assert_eq!(entries.len(), 2);
-        assert!(entries.iter().any(|e| e.path == "playbooks/setup-openclaw/playbook.md"));
-        assert!(entries.iter().any(|e| e.path == "playbooks/setup-openclaw/configure.md"));
+        assert!(entries
+            .iter()
+            .any(|e| e.path == "playbooks/setup-openclaw/playbook.md"));
+        assert!(entries
+            .iter()
+            .any(|e| e.path == "playbooks/setup-openclaw/configure.md"));
     }
 
     #[test]
@@ -1054,7 +1087,8 @@ type: system
         std::fs::write(
             pb_dir.join("configure.md"),
             "---\nname: configure\ndescription: Configure OpenClaw\ntype: system\n---\n# Configure",
-        ).unwrap();
+        )
+        .unwrap();
 
         let toc = knowledge_toc(&kdir).unwrap();
         assert!(toc.contains("network-diagnostics — Diagnose and fix network issues"));

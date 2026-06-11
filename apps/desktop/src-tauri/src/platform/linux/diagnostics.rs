@@ -40,9 +40,11 @@ impl Tool for LinuxSystemSummary {
         let distro = std::fs::read_to_string("/etc/os-release")
             .ok()
             .and_then(|c| {
-                c.lines()
-                    .find(|l| l.starts_with("PRETTY_NAME="))
-                    .map(|l| l.trim_start_matches("PRETTY_NAME=").trim_matches('"').to_string())
+                c.lines().find(|l| l.starts_with("PRETTY_NAME=")).map(|l| {
+                    l.trim_start_matches("PRETTY_NAME=")
+                        .trim_matches('"')
+                        .to_string()
+                })
             })
             .unwrap_or_else(|| "Unknown Linux".to_string());
 
@@ -116,12 +118,7 @@ impl Tool for LinuxSystemSummary {
 
 pub struct LinuxReadFile;
 
-const FORBIDDEN_PATH_PREFIXES: &[&str] = &[
-    "/proc/kcore",
-    "/proc/kmem",
-    "/dev/",
-    "/boot/",
-];
+const FORBIDDEN_PATH_PREFIXES: &[&str] = &["/proc/kcore", "/proc/kmem", "/dev/", "/boot/"];
 
 const ALLOWED_PATH_PREFIXES: &[&str] = &[
     "/home/",
@@ -299,7 +296,9 @@ impl Tool for LinuxReadLog {
                     stdout
                 }
             })
-            .unwrap_or_else(|e| format!("journalctl failed: {}. This system may not use systemd.", e));
+            .unwrap_or_else(|e| {
+                format!("journalctl failed: {}. This system may not use systemd.", e)
+            });
 
         Ok(ToolResult::read_only(
             output.clone(),
@@ -419,13 +418,19 @@ impl Tool for ShellRun {
         let needs_admin = command.trim_start().starts_with("sudo ");
         let (exec_program, exec_args) = if needs_admin {
             // Strip "sudo " and any flags to get the inner command
-            let inner = command.trim_start()
-                .strip_prefix("sudo").unwrap()
+            let inner = command
+                .trim_start()
+                .strip_prefix("sudo")
+                .unwrap()
                 .trim_start()
                 .trim_start_matches(|c: char| c == '-' || c.is_alphanumeric())
                 .trim_start();
             let inner = if inner.is_empty() {
-                command.trim_start().strip_prefix("sudo ").unwrap_or(command).trim()
+                command
+                    .trim_start()
+                    .strip_prefix("sudo ")
+                    .unwrap_or(command)
+                    .trim()
             } else {
                 inner
             };
@@ -516,7 +521,10 @@ impl Tool for ShellRun {
         };
 
         let truncated = if output.len() > 10_000 {
-            format!("{}...\n\n(output truncated at 10000 chars)", &output[..10_000])
+            format!(
+                "{}...\n\n(output truncated at 10000 chars)",
+                &output[..10_000]
+            )
         } else {
             output.clone()
         };

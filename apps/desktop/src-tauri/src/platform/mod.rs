@@ -11,7 +11,10 @@ use crate::agent::tool_router::ToolRouter;
 
 /// Register platform-specific tools with the router.
 /// `db_path` is passed so tools like disk_audit can read cached scan results.
-pub fn register_platform_tools(router: &mut ToolRouter, #[allow(unused_variables)] db_path: Option<&Path>) {
+pub fn register_platform_tools(
+    router: &mut ToolRouter,
+    #[allow(unused_variables)] db_path: Option<&Path>,
+) {
     #[cfg(target_os = "macos")]
     macos::register_tools(router, db_path);
 

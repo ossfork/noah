@@ -11,9 +11,13 @@ use std::path::PathBuf;
 
 fn journal_db_path() -> Option<PathBuf> {
     let home = std::env::var("HOME").ok()?;
-    let path = PathBuf::from(home)
-        .join("Library/Application Support/app.onnoah.desktop/journal.db");
-    if path.exists() { Some(path) } else { None }
+    let path =
+        PathBuf::from(home).join("Library/Application Support/app.onnoah.desktop/journal.db");
+    if path.exists() {
+        Some(path)
+    } else {
+        None
+    }
 }
 
 /// Minimal parser matching parse_assistant_ui logic — tests the same code paths
@@ -41,7 +45,8 @@ fn parse_ui_kind(text: &str) -> Option<String> {
     if trimmed.contains("[INFO]") {
         return Some("info".to_string());
     }
-    if trimmed.contains("[SITUATION]") && trimmed.contains("[PLAN]") && trimmed.contains("[ACTION:") {
+    if trimmed.contains("[SITUATION]") && trimmed.contains("[PLAN]") && trimmed.contains("[ACTION:")
+    {
         return Some("spa".to_string());
     }
 
@@ -73,7 +78,8 @@ fn all_real_assistant_messages_parse_without_panic() {
 
     println!("Testing {} assistant messages from journal.db", rows.len());
 
-    let mut parsed_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    let mut parsed_counts: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
     let mut unparsed = 0;
 
     for (id, content) in &rows {
@@ -137,7 +143,8 @@ fn all_json_messages_have_valid_kind() {
     println!("Testing {} JSON assistant messages", rows.len());
 
     let valid_kinds = ["spa", "done", "info", "user_question"];
-    let mut action_types: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    let mut action_types: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
 
     for (id, content) in &rows {
         let v: serde_json::Value = match serde_json::from_str(content) {
@@ -177,10 +184,7 @@ fn all_json_messages_have_valid_kind() {
 #[test]
 fn old_action_types_handled_gracefully() {
     // Unknown action types from old sessions must still parse as valid spa
-    let old_types = [
-        "UNKNOWN_TYPE",
-        "CUSTOM_FORM",
-    ];
+    let old_types = ["UNKNOWN_TYPE", "CUSTOM_FORM"];
 
     for old_type in &old_types {
         let json = format!(
@@ -188,6 +192,11 @@ fn old_action_types_handled_gracefully() {
             old_type
         );
         let kind = parse_ui_kind(&json);
-        assert_eq!(kind, Some("spa".to_string()), "Failed to parse action type: {}", old_type);
+        assert_eq!(
+            kind,
+            Some("spa".to_string()),
+            "Failed to parse action type: {}",
+            old_type
+        );
     }
 }

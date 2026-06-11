@@ -64,7 +64,10 @@ pub fn compute_score(
     enabled_categories: Option<&[Category]>,
 ) -> HealthScore {
     let checks = if let Some(enabled) = enabled_categories {
-        checks.into_iter().filter(|c| enabled.contains(&c.category)).collect()
+        checks
+            .into_iter()
+            .filter(|c| enabled.contains(&c.category))
+            .collect()
     } else {
         checks
     };
@@ -84,12 +87,19 @@ pub fn compute_score(
             category: cat,
             score: avg,
             grade: grade_for(avg),
-            checks: checks.iter().filter(|c| c.category == cat).cloned().collect(),
+            checks: checks
+                .iter()
+                .filter(|c| c.category == cat)
+                .cloned()
+                .collect(),
         });
     }
 
     // Weighted overall: only count categories that have checks.
-    let total_weight: u32 = category_scores.iter().map(|cs| cs.category.weight() as u32).sum();
+    let total_weight: u32 = category_scores
+        .iter()
+        .map(|cs| cs.category.weight() as u32)
+        .sum();
     let weighted_sum: u32 = category_scores
         .iter()
         .map(|cs| cs.score as u32 * cs.category.weight() as u32)
@@ -148,11 +158,11 @@ mod tests {
     #[test]
     fn mixed_scores() {
         let checks = vec![
-            check("sec.fw", Category::Security, CheckStatus::Pass),  // 100
-            check("sec.fv", Category::Security, CheckStatus::Fail),  // 0
+            check("sec.fw", Category::Security, CheckStatus::Pass), // 100
+            check("sec.fv", Category::Security, CheckStatus::Fail), // 0
             // Security avg = 50, weight 30
-            check("upd.os", Category::Updates, CheckStatus::Warn),   // 50
-            // Updates avg = 50, weight 25
+            check("upd.os", Category::Updates, CheckStatus::Warn), // 50
+                                                                   // Updates avg = 50, weight 25
         ];
         let score = compute_score(checks, None, None);
         // weighted = (50*30 + 50*25) / (30+25) = 2750/55 = 50

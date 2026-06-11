@@ -137,7 +137,8 @@ impl Tool for WinCancelPrintJobs {
     async fn execute(&self, _input: &Value) -> Result<ToolResult> {
         let output = super::hidden_cmd("powershell")
             .args([
-                "-NoProfile", "-Command",
+                "-NoProfile",
+                "-Command",
                 "Get-Printer | ForEach-Object { \
                     Get-PrintJob -PrinterName $_.Name -ErrorAction SilentlyContinue | \
                     Remove-PrintJob -ErrorAction SilentlyContinue \

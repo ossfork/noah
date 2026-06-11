@@ -1,7 +1,6 @@
 use tauri::State;
 use uuid::Uuid;
 
-use crate::AppState;
 use crate::dashboard_link::DashboardConfig;
 use crate::safety::journal;
 use crate::scanner::backups::BackupScanner;
@@ -10,22 +9,30 @@ use crate::scanner::performance::PerformanceScanner;
 use crate::scanner::security::SecurityScanner;
 use crate::scanner::updates::UpdateScanner;
 use crate::scanner::Scanner;
+use crate::AppState;
 
-use noah_health::{Category, CheckResult, CheckStatus, compute_score};
+use noah_health::{compute_score, Category, CheckResult, CheckStatus};
 
 /// Convert stored category strings to Category enums, respecting fleet policy.
 pub(crate) fn enabled_categories_from_config(app_dir: &std::path::Path) -> Option<Vec<Category>> {
     let config = DashboardConfig::load(app_dir)?;
     let cats = config.enabled_categories?;
-    let parsed: Vec<Category> = cats.iter().filter_map(|s| match s.as_str() {
-        "security" => Some(Category::Security),
-        "updates" => Some(Category::Updates),
-        "performance" => Some(Category::Performance),
-        "backups" => Some(Category::Backups),
-        "network" => Some(Category::Network),
-        _ => None,
-    }).collect();
-    if parsed.is_empty() { None } else { Some(parsed) }
+    let parsed: Vec<Category> = cats
+        .iter()
+        .filter_map(|s| match s.as_str() {
+            "security" => Some(Category::Security),
+            "updates" => Some(Category::Updates),
+            "performance" => Some(Category::Performance),
+            "backups" => Some(Category::Backups),
+            "network" => Some(Category::Network),
+            _ => None,
+        })
+        .collect();
+    if parsed.is_empty() {
+        None
+    } else {
+        Some(parsed)
+    }
 }
 
 /// Check whether a category should be scanned given the enabled filter.
@@ -43,7 +50,9 @@ pub(crate) fn checks_from_scan_results(
     category: Category,
 ) -> Vec<CheckResult> {
     let results = journal::query_scan_results(conn, scan_type, None, None, None, 100);
-    let Ok(results) = results else { return Vec::new() };
+    let Ok(results) = results else {
+        return Vec::new();
+    };
 
     results
         .iter()
@@ -72,11 +81,31 @@ pub async fn get_health_score(state: State<'_, AppState>) -> Result<String, Stri
     let enabled = enabled_categories_from_config(&state.app_dir);
 
     let mut all_checks = Vec::new();
-    all_checks.extend(checks_from_scan_results(&conn, "security", Category::Security));
-    all_checks.extend(checks_from_scan_results(&conn, "updates", Category::Updates));
-    all_checks.extend(checks_from_scan_results(&conn, "backups", Category::Backups));
-    all_checks.extend(checks_from_scan_results(&conn, "performance", Category::Performance));
-    all_checks.extend(checks_from_scan_results(&conn, "network", Category::Network));
+    all_checks.extend(checks_from_scan_results(
+        &conn,
+        "security",
+        Category::Security,
+    ));
+    all_checks.extend(checks_from_scan_results(
+        &conn,
+        "updates",
+        Category::Updates,
+    ));
+    all_checks.extend(checks_from_scan_results(
+        &conn,
+        "backups",
+        Category::Backups,
+    ));
+    all_checks.extend(checks_from_scan_results(
+        &conn,
+        "performance",
+        Category::Performance,
+    ));
+    all_checks.extend(checks_from_scan_results(
+        &conn,
+        "network",
+        Category::Network,
+    ));
 
     // Don't fabricate a score when no checks have run yet.
     if all_checks.is_empty() {
@@ -101,7 +130,10 @@ pub async fn get_health_score(state: State<'_, AppState>) -> Result<String, Stri
 
 /// Run all health scanners directly, then compute and return the health score.
 #[tauri::command]
-pub async fn run_health_check(state: State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<String, String> {
+pub async fn run_health_check(
+    state: State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+) -> Result<String, String> {
     // Run security + update scanners on a blocking thread, then read results
     // from the DB within the same function to avoid any stale-read issues.
     let db = state.db.clone();
@@ -149,11 +181,31 @@ pub async fn run_health_check(state: State<'_, AppState>, app_handle: tauri::App
 
         // Read back results from DB immediately (same connection, guaranteed fresh).
         let mut all_checks = Vec::new();
-        all_checks.extend(checks_from_scan_results(&conn, "security", Category::Security));
-        all_checks.extend(checks_from_scan_results(&conn, "updates", Category::Updates));
-        all_checks.extend(checks_from_scan_results(&conn, "backups", Category::Backups));
-        all_checks.extend(checks_from_scan_results(&conn, "performance", Category::Performance));
-        all_checks.extend(checks_from_scan_results(&conn, "network", Category::Network));
+        all_checks.extend(checks_from_scan_results(
+            &conn,
+            "security",
+            Category::Security,
+        ));
+        all_checks.extend(checks_from_scan_results(
+            &conn,
+            "updates",
+            Category::Updates,
+        ));
+        all_checks.extend(checks_from_scan_results(
+            &conn,
+            "backups",
+            Category::Backups,
+        ));
+        all_checks.extend(checks_from_scan_results(
+            &conn,
+            "performance",
+            Category::Performance,
+        ));
+        all_checks.extend(checks_from_scan_results(
+            &conn,
+            "network",
+            Category::Network,
+        ));
 
         if all_checks.is_empty() {
             return Ok("null".to_string());
@@ -186,10 +238,28 @@ pub async fn run_health_check(state: State<'_, AppState>, app_handle: tauri::App
         tokio::spawn(async move {
             if let Some(config) = DashboardConfig::load(&app_dir) {
                 if let Ok(score) = serde_json::from_str::<serde_json::Value>(&json_for_sync) {
-                    let s = score.get("overall_score").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
-                    let g = score.get("overall_grade").and_then(|v| v.as_str()).unwrap_or("F");
-                    let cats = score.get("categories").map(|v| v.to_string()).unwrap_or_else(|| "[]".to_string());
-                    match crate::dashboard_link::push_checkin(&config, s, g, &cats, Some(&app_dir), Some(&reg)).await {
+                    let s = score
+                        .get("overall_score")
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or(0) as i32;
+                    let g = score
+                        .get("overall_grade")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("F");
+                    let cats = score
+                        .get("categories")
+                        .map(|v| v.to_string())
+                        .unwrap_or_else(|| "[]".to_string());
+                    match crate::dashboard_link::push_checkin(
+                        &config,
+                        s,
+                        g,
+                        &cats,
+                        Some(&app_dir),
+                        Some(&reg),
+                    )
+                    .await
+                    {
                         Ok(Some(new_cats)) => {
                             // Update enabled_categories from fleet policy.
                             if let Some(mut cfg) = DashboardConfig::load(&app_dir) {
@@ -228,19 +298,27 @@ pub async fn open_health_fix(check_id: String) -> Result<(), String> {
     let target = match check_id.as_str() {
         // macOS
         #[cfg(target_os = "macos")]
-        "security.firewall" => "x-apple.systempreferences:com.apple.Network-Settings.extension?Firewall",
+        "security.firewall" => {
+            "x-apple.systempreferences:com.apple.Network-Settings.extension?Firewall"
+        }
         #[cfg(target_os = "macos")]
         "security.filevault" => "x-apple.systempreferences:com.apple.preference.security?FDE",
         #[cfg(target_os = "macos")]
-        "security.screen_lock" => "x-apple.systempreferences:com.apple.Lock-Screen-Settings.extension",
+        "security.screen_lock" => {
+            "x-apple.systempreferences:com.apple.Lock-Screen-Settings.extension"
+        }
         #[cfg(target_os = "macos")]
         "security.gatekeeper" => "x-apple.systempreferences:com.apple.preference.security?General",
         #[cfg(target_os = "macos")]
-        "security.xprotect" => "x-apple.systempreferences:com.apple.Software-Update-Settings.extension",
+        "security.xprotect" => {
+            "x-apple.systempreferences:com.apple.Software-Update-Settings.extension"
+        }
         #[cfg(target_os = "macos")]
         "updates.os" => "x-apple.systempreferences:com.apple.Software-Update-Settings.extension",
         #[cfg(target_os = "macos")]
-        "backups.timemachine" | "backups.timemachine_dest" => "x-apple.systempreferences:com.apple.Time-Machine-Settings.extension",
+        "backups.timemachine" | "backups.timemachine_dest" => {
+            "x-apple.systempreferences:com.apple.Time-Machine-Settings.extension"
+        }
         #[cfg(target_os = "macos")]
         "security.sip" => {
             // SIP can't be toggled from user space — no settings pane to open.
@@ -313,8 +391,8 @@ pub async fn get_health_history(
     limit: Option<usize>,
 ) -> Result<String, String> {
     let conn = state.db.lock().await;
-    let records = journal::list_health_scores(&conn, limit.unwrap_or(30))
-        .map_err(|e| e.to_string())?;
+    let records =
+        journal::list_health_scores(&conn, limit.unwrap_or(30)).map_err(|e| e.to_string())?;
     serde_json::to_string(&records).map_err(|e| e.to_string())
 }
 
@@ -339,8 +417,7 @@ pub async fn resolve_fleet_action(
     action_id: String,
     status: String,
 ) -> Result<(), String> {
-    let config = DashboardConfig::load(&state.app_dir)
-        .ok_or("Not connected to fleet")?;
+    let config = DashboardConfig::load(&state.app_dir).ok_or("Not connected to fleet")?;
 
     crate::dashboard_link::report_action_status(&config, &action_id, &status)
         .await
@@ -364,8 +441,13 @@ pub async fn verify_remediation(
     // Parse score and push verification to fleet
     if let Some(config) = DashboardConfig::load(&state.app_dir) {
         if let Ok(score_val) = serde_json::from_str::<serde_json::Value>(&result_json) {
-            let score_after = score_val.get("overall_score").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
-            if let Err(e) = crate::dashboard_link::push_verification(&config, &action_id, score_after).await {
+            let score_after = score_val
+                .get("overall_score")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0) as i32;
+            if let Err(e) =
+                crate::dashboard_link::push_verification(&config, &action_id, score_after).await
+            {
                 eprintln!("[health] verification push failed: {}", e);
             }
         }
@@ -386,11 +468,14 @@ pub async fn start_fleet_playbook(
     let session_id = {
         let mut orch = state.orchestrator.lock().await;
         let id = orch.create_session();
-        orch.set_trigger_context(&id, crate::playbooks::TriggerContext {
-            trigger: "fleet_dispatch".to_string(),
-            check_id: Some(action_id.clone()),
-            score_before: None,
-        });
+        orch.set_trigger_context(
+            &id,
+            crate::playbooks::TriggerContext {
+                trigger: "fleet_dispatch".to_string(),
+                check_id: Some(action_id.clone()),
+                score_before: None,
+            },
+        );
         id
     };
 
@@ -408,7 +493,8 @@ pub async fn start_fleet_playbook(
     Ok(serde_json::json!({
         "session_id": session_id,
         "playbook_slug": playbook_slug,
-    }).to_string())
+    })
+    .to_string())
 }
 
 /// Generate a plain-text health report for compliance/audit purposes.
@@ -418,11 +504,31 @@ pub async fn export_health_report(state: State<'_, AppState>) -> Result<String, 
     let enabled = enabled_categories_from_config(&state.app_dir);
 
     let mut all_checks = Vec::new();
-    all_checks.extend(checks_from_scan_results(&conn, "security", Category::Security));
-    all_checks.extend(checks_from_scan_results(&conn, "updates", Category::Updates));
-    all_checks.extend(checks_from_scan_results(&conn, "backups", Category::Backups));
-    all_checks.extend(checks_from_scan_results(&conn, "performance", Category::Performance));
-    all_checks.extend(checks_from_scan_results(&conn, "network", Category::Network));
+    all_checks.extend(checks_from_scan_results(
+        &conn,
+        "security",
+        Category::Security,
+    ));
+    all_checks.extend(checks_from_scan_results(
+        &conn,
+        "updates",
+        Category::Updates,
+    ));
+    all_checks.extend(checks_from_scan_results(
+        &conn,
+        "backups",
+        Category::Backups,
+    ));
+    all_checks.extend(checks_from_scan_results(
+        &conn,
+        "performance",
+        Category::Performance,
+    ));
+    all_checks.extend(checks_from_scan_results(
+        &conn,
+        "network",
+        Category::Network,
+    ));
 
     if all_checks.is_empty() {
         return Err("No health data available. Run a health check first.".to_string());
@@ -449,13 +555,23 @@ pub async fn export_health_report(state: State<'_, AppState>) -> Result<String, 
     report.push_str("╚══════════════════════════════════════════╝\n\n");
     report.push_str(&format!("Device:     {}\n", hostname));
     report.push_str(&format!("OS:         {}\n", os_name));
-    report.push_str(&format!("Generated:  {}\n", chrono::Utc::now().format("%Y-%m-%d %H:%M UTC")));
-    report.push_str(&format!("\nOverall Score: {} ({})\n", score.overall_score, score.overall_grade));
+    report.push_str(&format!(
+        "Generated:  {}\n",
+        chrono::Utc::now().format("%Y-%m-%d %H:%M UTC")
+    ));
+    report.push_str(&format!(
+        "\nOverall Score: {} ({})\n",
+        score.overall_score, score.overall_grade
+    ));
     report.push_str(&format!("{}\n", "─".repeat(44)));
 
     for cat in &score.categories {
-        report.push_str(&format!("\n▸ {} — {} ({})\n",
-            cat.category.label(), cat.score, cat.grade));
+        report.push_str(&format!(
+            "\n▸ {} — {} ({})\n",
+            cat.category.label(),
+            cat.score,
+            cat.grade
+        ));
         for check in &cat.checks {
             let icon = match check.status {
                 noah_health::CheckStatus::Pass => "✓",

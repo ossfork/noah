@@ -85,7 +85,11 @@ mod tests {
 
         for def in &defs {
             assert!(!def.name.is_empty(), "Tool name is empty");
-            assert!(!def.description.is_empty(), "Tool {} has empty description", def.name);
+            assert!(
+                !def.description.is_empty(),
+                "Tool {} has empty description",
+                def.name
+            );
             // input_schema should be a valid JSON object with "type": "object"
             assert_eq!(
                 def.input_schema.get("type").and_then(|v| v.as_str()),

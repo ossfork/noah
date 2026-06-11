@@ -181,7 +181,10 @@ impl Tool for MacRestartCups {
     async fn execute(&self, _input: &Value) -> Result<ToolResult> {
         // Try to restart CUPS via launchctl
         let stop = Command::new("launchctl")
-            .args(["unload", "/System/Library/LaunchDaemons/org.cups.cupsd.plist"])
+            .args([
+                "unload",
+                "/System/Library/LaunchDaemons/org.cups.cupsd.plist",
+            ])
             .output();
 
         let start = Command::new("launchctl")
@@ -194,9 +197,7 @@ impl Tool for MacRestartCups {
             }
             _ => {
                 // Fallback: try killall cupsd
-                let fallback = Command::new("killall")
-                    .arg("cupsd")
-                    .output();
+                let fallback = Command::new("killall").arg("cupsd").output();
                 match fallback {
                     Ok(o) if o.status.success() => {
                         "CUPS restarted via killall (it will auto-restart).".to_string()

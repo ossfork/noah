@@ -9,9 +9,7 @@ use std::process::ExitCode;
 #[tokio::main]
 async fn main() -> ExitCode {
     let mut args = std::env::args().skip(1);
-    let prompt = args
-        .next()
-        .unwrap_or_else(|| "My wifi is slow".to_string());
+    let prompt = args.next().unwrap_or_else(|| "My wifi is slow".to_string());
     let max_turns = args
         .next()
         .and_then(|s| s.parse::<usize>().ok())

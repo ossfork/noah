@@ -170,7 +170,12 @@ const PLAYBOOK_AUTHORING_GUIDE: &str = include_str!("../../../../../playbook-aut
 ///
 /// Layout: [static prompt (cached)] [dynamic context (per-request)]
 /// The static block gets a cache_control breakpoint so Anthropic caches it.
-pub fn system_prompt_blocks(os_context: &str, knowledge_toc: &str, locale: Option<&str>, mode: &str) -> Vec<SystemBlock> {
+pub fn system_prompt_blocks(
+    os_context: &str,
+    knowledge_toc: &str,
+    locale: Option<&str>,
+    mode: &str,
+) -> Vec<SystemBlock> {
     let mut blocks = vec![SystemBlock {
         block_type: "text",
         text: STATIC_PROMPT.to_string(),

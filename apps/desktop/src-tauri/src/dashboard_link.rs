@@ -57,7 +57,9 @@ pub fn parse_enrollment_url(input: &str) -> Result<(String, String)> {
         let base_url = trimmed[..pos].to_string();
         let token = trimmed[pos + 8..].to_string(); // skip "/enroll/"
         if base_url.is_empty() || token.is_empty() {
-            anyhow::bail!("Invalid enrollment URL — expected format: https://your-dashboard/enroll/TOKEN");
+            anyhow::bail!(
+                "Invalid enrollment URL — expected format: https://your-dashboard/enroll/TOKEN"
+            );
         }
         return Ok((base_url, token));
     }
@@ -113,8 +115,16 @@ pub async fn enroll_device(
         enabled_categories: Option<Vec<String>>,
     }
 
-    let data: EnrollResponse = resp.json().await.context("Invalid response from fleet dashboard")?;
-    Ok((data.device_id, data.device_token, data.fleet_name.unwrap_or_else(|| "My Fleet".to_string()), data.enabled_categories))
+    let data: EnrollResponse = resp
+        .json()
+        .await
+        .context("Invalid response from fleet dashboard")?;
+    Ok((
+        data.device_id,
+        data.device_token,
+        data.fleet_name.unwrap_or_else(|| "My Fleet".to_string()),
+        data.enabled_categories,
+    ))
 }
 
 /// Push a health checkin to the dashboard.
@@ -128,7 +138,10 @@ pub async fn push_checkin(
     app_dir: Option<&Path>,
     playbook_registry: Option<&Arc<RwLock<crate::playbooks::PlaybookRegistry>>>,
 ) -> Result<Option<Vec<String>>> {
-    let url = format!("{}/dashboard/checkin", config.dashboard_url.trim_end_matches('/'));
+    let url = format!(
+        "{}/dashboard/checkin",
+        config.dashboard_url.trim_end_matches('/')
+    );
 
     let body = serde_json::json!({
         "health_score": score,
@@ -170,7 +183,12 @@ pub async fn push_checkin(
         policy: Option<crate::fleet_policy::FleetPolicy>,
     }
 
-    let data: CheckinResponse = resp.json().await.unwrap_or(CheckinResponse { enabled_categories: None, fleet_name: None, assigned_playbooks: None, policy: None });
+    let data: CheckinResponse = resp.json().await.unwrap_or(CheckinResponse {
+        enabled_categories: None,
+        fleet_name: None,
+        assigned_playbooks: None,
+        policy: None,
+    });
 
     // Update fleet name from server (handles admin renames)
     if let (Some(ref name), Some(dir)) = (&data.fleet_name, app_dir) {
@@ -235,7 +253,8 @@ pub async fn push_checkin(
                     }
                     if let Ok(content) = std::fs::read_to_string(&path) {
                         if content.contains("source: fleet") {
-                            let slug = path.file_stem()
+                            let slug = path
+                                .file_stem()
                                 .unwrap_or_default()
                                 .to_string_lossy()
                                 .to_string();
@@ -259,7 +278,10 @@ pub async fn push_checkin(
         if let Some(registry) = playbook_registry {
             if let Ok(mut reg) = registry.write() {
                 reg.reload();
-                eprintln!("[fleet] playbook registry reloaded ({} playbooks)", reg.metas.len());
+                eprintln!(
+                    "[fleet] playbook registry reloaded ({} playbooks)",
+                    reg.metas.len()
+                );
             }
         }
     }
@@ -333,8 +355,14 @@ fn default_action_type() -> String {
 
 /// Poll for pending remediation actions from the fleet.
 /// Pass `app_dir` so we can auto-unlink if the device token has been revoked.
-pub async fn poll_actions(config: &DashboardConfig, app_dir: Option<&Path>) -> Result<Vec<FleetAction>> {
-    let url = format!("{}/dashboard/actions/pending", config.dashboard_url.trim_end_matches('/'));
+pub async fn poll_actions(
+    config: &DashboardConfig,
+    app_dir: Option<&Path>,
+) -> Result<Vec<FleetAction>> {
+    let url = format!(
+        "{}/dashboard/actions/pending",
+        config.dashboard_url.trim_end_matches('/')
+    );
 
     let client = reqwest::Client::new();
     let resp = client
@@ -361,13 +389,23 @@ pub async fn poll_actions(config: &DashboardConfig, app_dir: Option<&Path>) -> R
         actions: Vec<FleetAction>,
     }
 
-    let data: PollResponse = resp.json().await.unwrap_or(PollResponse { actions: Vec::new() });
+    let data: PollResponse = resp.json().await.unwrap_or(PollResponse {
+        actions: Vec::new(),
+    });
     Ok(data.actions)
 }
 
 /// Report action status back to the fleet.
-pub async fn report_action_status(config: &DashboardConfig, action_id: &str, status: &str) -> Result<()> {
-    let url = format!("{}/dashboard/actions/{}/status", config.dashboard_url.trim_end_matches('/'), action_id);
+pub async fn report_action_status(
+    config: &DashboardConfig,
+    action_id: &str,
+    status: &str,
+) -> Result<()> {
+    let url = format!(
+        "{}/dashboard/actions/{}/status",
+        config.dashboard_url.trim_end_matches('/'),
+        action_id
+    );
 
     let client = reqwest::Client::new();
     let resp = client
@@ -545,7 +583,8 @@ mod tests {
 
     #[test]
     fn parse_enrollment_url_valid() {
-        let (base, token) = parse_enrollment_url("https://dash.onnoah.app/enroll/abc123def456").unwrap();
+        let (base, token) =
+            parse_enrollment_url("https://dash.onnoah.app/enroll/abc123def456").unwrap();
         assert_eq!(base, "https://dash.onnoah.app");
         assert_eq!(token, "abc123def456");
     }

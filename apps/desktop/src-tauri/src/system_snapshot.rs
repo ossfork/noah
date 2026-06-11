@@ -57,16 +57,17 @@ fn gather_backup() -> String {
 
     // Path looks like /Volumes/Backup/Backups.backupdb/host/2026-03-12-143022
     // Extract the date component from the last path segment.
-    let date_part = latest
-        .rsplit('/')
-        .next()
-        .unwrap_or("")
-        .to_string();
+    let date_part = latest.rsplit('/').next().unwrap_or("").to_string();
 
     // Try to parse the date segment (YYYY-MM-DD-HHMMSS).
     let ago = chrono::NaiveDateTime::parse_from_str(&date_part, "%Y-%m-%d-%H%M%S")
         .ok()
-        .and_then(|dt| dt.and_utc().signed_duration_since(Utc::now()).num_hours().checked_neg())
+        .and_then(|dt| {
+            dt.and_utc()
+                .signed_duration_since(Utc::now())
+                .num_hours()
+                .checked_neg()
+        })
         .map(|h| {
             if h < 1 {
                 "less than 1h ago".to_string()
@@ -82,7 +83,10 @@ fn gather_backup() -> String {
     let dest_info = run_cmd("tmutil", &["destinationinfo"], "");
     let dest_name = dest_info
         .lines()
-        .find_map(|l| l.strip_prefix("Name").map(|v| v.trim().trim_start_matches(':').trim().to_string()))
+        .find_map(|l| {
+            l.strip_prefix("Name")
+                .map(|v| v.trim().trim_start_matches(':').trim().to_string())
+        })
         .unwrap_or_default();
 
     let mut result = "Time Machine: last backup".to_string();
@@ -171,11 +175,7 @@ fn count_plist_files(dir: &std::path::Path) -> usize {
     std::fs::read_dir(dir)
         .map(|rd| {
             rd.filter_map(|e| e.ok())
-                .filter(|e| {
-                    e.path()
-                        .extension()
-                        .is_some_and(|ext| ext == "plist")
-                })
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "plist"))
                 .count()
         })
         .unwrap_or(0)
@@ -270,7 +270,8 @@ fn gather_snapshot() -> SystemSnapshot {
             "false" => parts.push("Defender off"),
             _ => {}
         }
-        let bitlocker = ps("try { (Get-BitLockerVolume -MountPoint 'C:').ProtectionStatus } catch { '' }");
+        let bitlocker =
+            ps("try { (Get-BitLockerVolume -MountPoint 'C:').ProtectionStatus } catch { '' }");
         match bitlocker.trim() {
             "On" | "1" => parts.push("BitLocker on"),
             "Off" | "0" => parts.push("BitLocker off"),
@@ -296,9 +297,8 @@ fn gather_snapshot() -> SystemSnapshot {
     };
 
     let uptime = {
-        let hours_str = ps(
-            "((Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime).TotalHours",
-        );
+        let hours_str =
+            ps("((Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime).TotalHours");
         if let Ok(total_hours) = hours_str.trim().parse::<f64>() {
             let h = total_hours as i64;
             let days = h / 24;
@@ -566,7 +566,10 @@ mod tests {
     fn print_live_snapshot() {
         let snap = SystemSnapshot::gather();
         let prompt = snap.to_prompt_string();
-        eprintln!("\n=== LIVE SNAPSHOT PROMPT ===\n{}\n===========================\n", prompt);
+        eprintln!(
+            "\n=== LIVE SNAPSHOT PROMPT ===\n{}\n===========================\n",
+            prompt
+        );
         // Just ensure it doesn't panic and produces some output on a real system.
         assert!(!snap.gathered_at.is_empty());
     }

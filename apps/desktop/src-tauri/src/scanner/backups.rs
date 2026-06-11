@@ -23,7 +23,11 @@ fn run_cmd(program: &str, args: &[&str], fallback: &str) -> String {
     match cmd.output() {
         Ok(output) if output.status.success() => {
             let s = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if s.is_empty() { fallback.to_string() } else { s }
+            if s.is_empty() {
+                fallback.to_string()
+            } else {
+                s
+            }
         }
         Ok(output) => {
             let combined = format!(
@@ -32,7 +36,11 @@ fn run_cmd(program: &str, args: &[&str], fallback: &str) -> String {
                 String::from_utf8_lossy(&output.stderr)
             );
             let trimmed = combined.trim().to_string();
-            if trimmed.is_empty() { fallback.to_string() } else { trimmed }
+            if trimmed.is_empty() {
+                fallback.to_string()
+            } else {
+                trimmed
+            }
         }
         _ => fallback.to_string(),
     }
@@ -54,15 +62,18 @@ struct RawCheck {
 
 /// Convert raw checks into the scan_results tuple format used by journal.
 #[allow(clippy::type_complexity)]
-fn checks_to_results(checks: &[RawCheck], generation: i64) -> Vec<(
-    String,           // path (we use check id)
-    Option<String>,   // category
-    Option<String>,   // key (label)
-    Option<f64>,      // value_num (100=pass, 50=warn, 0=fail)
-    Option<String>,   // value_text (status string)
-    Option<String>,   // metadata (detail)
-    bool,             // stale
-    i64,              // generation
+fn checks_to_results(
+    checks: &[RawCheck],
+    generation: i64,
+) -> Vec<(
+    String,         // path (we use check id)
+    Option<String>, // category
+    Option<String>, // key (label)
+    Option<f64>,    // value_num (100=pass, 50=warn, 0=fail)
+    Option<String>, // value_text (status string)
+    Option<String>, // metadata (detail)
+    bool,           // stale
+    i64,            // generation
 )> {
     checks
         .iter()
@@ -103,11 +114,7 @@ fn run_macos_checks() -> Vec<RawCheck> {
         });
     } else {
         // Path looks like /Volumes/Backup/Backups.backupdb/host/2026-03-12-143022
-        let date_part = latest
-            .rsplit('/')
-            .next()
-            .unwrap_or("")
-            .to_string();
+        let date_part = latest.rsplit('/').next().unwrap_or("").to_string();
 
         let hours_ago = chrono::NaiveDateTime::parse_from_str(&date_part, "%Y-%m-%d-%H%M%S")
             .ok()
@@ -184,7 +191,11 @@ fn run_windows_checks() -> Vec<RawCheck> {
     checks.push(RawCheck {
         id: "backups.filehistory",
         label: "File History",
-        status: if fh.trim() == "enabled" { "pass" } else { "fail" },
+        status: if fh.trim() == "enabled" {
+            "pass"
+        } else {
+            "fail"
+        },
         detail: if fh.trim() == "enabled" {
             "File History is enabled".to_string()
         } else {
@@ -221,7 +232,14 @@ fn run_linux_checks() -> Vec<RawCheck> {
 
     if has_timeshift {
         // Count snapshots
-        let snap_count = run_cmd("sh", &["-c", "timeshift --list 2>/dev/null | grep -cE '^[0-9]' || echo 0"], "0");
+        let snap_count = run_cmd(
+            "sh",
+            &[
+                "-c",
+                "timeshift --list 2>/dev/null | grep -cE '^[0-9]' || echo 0",
+            ],
+            "0",
+        );
         let count: i32 = snap_count.trim().parse().unwrap_or(0);
         checks.push(RawCheck {
             id: "backups.snapshots",
@@ -244,11 +262,17 @@ fn run_linux_checks() -> Vec<RawCheck> {
         let has_deja_dup = std::path::Path::new("/usr/bin/deja-dup").exists();
 
         if has_restic || has_borg || has_duplicity || has_rsnapshot || has_deja_dup {
-            let tool = if has_borg { "Borg" }
-                else if has_restic { "Restic" }
-                else if has_deja_dup { "Deja Dup" }
-                else if has_duplicity { "Duplicity" }
-                else { "rsnapshot" };
+            let tool = if has_borg {
+                "Borg"
+            } else if has_restic {
+                "Restic"
+            } else if has_deja_dup {
+                "Deja Dup"
+            } else if has_duplicity {
+                "Duplicity"
+            } else {
+                "rsnapshot"
+            };
             checks.push(RawCheck {
                 id: "backups.tool",
                 label: "Backup Tool",

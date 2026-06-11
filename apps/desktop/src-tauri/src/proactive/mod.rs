@@ -45,7 +45,11 @@ pub fn is_proactive_enabled(setting_value: Option<&str>) -> bool {
 
 /// Check if enough time has elapsed since the last check.
 /// Returns true if we should run (enough time passed, or no previous check).
-pub fn check_interval_elapsed(last_check: Option<&str>, now: chrono::DateTime<chrono::Utc>, min_hours: i64) -> bool {
+pub fn check_interval_elapsed(
+    last_check: Option<&str>,
+    now: chrono::DateTime<chrono::Utc>,
+    min_hours: i64,
+) -> bool {
     match last_check {
         None => true,
         Some(ts_str) => {
@@ -62,7 +66,11 @@ pub fn check_interval_elapsed(last_check: Option<&str>, now: chrono::DateTime<ch
 }
 
 /// Check if we can show a suggestion (not shown in the last `min_hours` hours).
-pub fn can_show_suggestion(last_shown: Option<&str>, now: chrono::DateTime<chrono::Utc>, min_hours: i64) -> bool {
+pub fn can_show_suggestion(
+    last_shown: Option<&str>,
+    now: chrono::DateTime<chrono::Utc>,
+    min_hours: i64,
+) -> bool {
     check_interval_elapsed(last_shown, now, min_hours)
 }
 
@@ -72,7 +80,11 @@ impl ProactiveMonitor {
         db: Arc<Mutex<rusqlite::Connection>>,
         app_handle: tauri::AppHandle,
     ) -> Self {
-        Self { llm, db, app_handle }
+        Self {
+            llm,
+            db,
+            app_handle,
+        }
     }
 
     /// Build the diagnostic pipelines for the current platform.
@@ -81,9 +93,9 @@ impl ProactiveMonitor {
 
         #[cfg(target_os = "macos")]
         {
-            use crate::platform::macos::performance::{MacDiskUsage, MacProcessList};
-            use crate::platform::macos::disk_audit::DiskAudit;
             use crate::platform::macos::crash_logs::CrashLogReader;
+            use crate::platform::macos::disk_audit::DiskAudit;
+            use crate::platform::macos::performance::{MacDiskUsage, MacProcessList};
 
             pipelines.push(Pipeline {
                 category: "disk",
@@ -109,8 +121,8 @@ impl ProactiveMonitor {
 
         #[cfg(target_os = "windows")]
         {
-            use crate::platform::windows::performance::{WinDiskUsage, WinProcessList};
             use crate::platform::windows::diagnostics::WinReadLog;
+            use crate::platform::windows::performance::{WinDiskUsage, WinProcessList};
 
             pipelines.push(Pipeline {
                 category: "disk",
@@ -199,11 +211,7 @@ impl ProactiveMonitor {
                     ));
                 }
                 Err(e) => {
-                    eprintln!(
-                        "[proactive] tool {} failed: {}",
-                        pipeline.tool.name(),
-                        e
-                    );
+                    eprintln!("[proactive] tool {} failed: {}", pipeline.tool.name(), e);
                 }
             }
         }
@@ -247,7 +255,11 @@ impl ProactiveMonitor {
                                 continue;
                             }
                             // Update last shown timestamp.
-                            let _ = journal::set_setting(&conn, "proactive_last_shown", &now.to_rfc3339());
+                            let _ = journal::set_setting(
+                                &conn,
+                                "proactive_last_shown",
+                                &now.to_rfc3339(),
+                            );
                         }
 
                         // Emit event to frontend.

@@ -23,7 +23,11 @@ fn run_cmd(program: &str, args: &[&str], fallback: &str) -> String {
     match cmd.output() {
         Ok(output) if output.status.success() => {
             let s = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if s.is_empty() { fallback.to_string() } else { s }
+            if s.is_empty() {
+                fallback.to_string()
+            } else {
+                s
+            }
         }
         Ok(output) => {
             // Some commands write to stderr even on "success" (e.g. sysadminctl).
@@ -33,7 +37,11 @@ fn run_cmd(program: &str, args: &[&str], fallback: &str) -> String {
                 String::from_utf8_lossy(&output.stderr)
             );
             let trimmed = combined.trim().to_string();
-            if trimmed.is_empty() { fallback.to_string() } else { trimmed }
+            if trimmed.is_empty() {
+                fallback.to_string()
+            } else {
+                trimmed
+            }
         }
         _ => fallback.to_string(),
     }
@@ -55,15 +63,18 @@ struct RawCheck {
 
 /// Convert raw checks into the scan_results tuple format used by journal.
 #[allow(clippy::type_complexity)]
-fn checks_to_results(checks: &[RawCheck], generation: i64) -> Vec<(
-    String,           // path (we use check id)
-    Option<String>,   // category
-    Option<String>,   // key (label)
-    Option<f64>,      // value_num (100=pass, 50=warn, 0=fail)
-    Option<String>,   // value_text (status string)
-    Option<String>,   // metadata (detail)
-    bool,             // stale
-    i64,              // generation
+fn checks_to_results(
+    checks: &[RawCheck],
+    generation: i64,
+) -> Vec<(
+    String,         // path (we use check id)
+    Option<String>, // category
+    Option<String>, // key (label)
+    Option<f64>,    // value_num (100=pass, 50=warn, 0=fail)
+    Option<String>, // value_text (status string)
+    Option<String>, // metadata (detail)
+    bool,           // stale
+    i64,            // generation
 )> {
     checks
         .iter()
@@ -102,7 +113,11 @@ fn run_macos_checks() -> Vec<RawCheck> {
     checks.push(RawCheck {
         id: "security.firewall",
         label: "Firewall",
-        status: if fw.to_lowercase().contains("enabled") { "pass" } else { "fail" },
+        status: if fw.to_lowercase().contains("enabled") {
+            "pass"
+        } else {
+            "fail"
+        },
         detail: fw,
     });
 
@@ -120,7 +135,11 @@ fn run_macos_checks() -> Vec<RawCheck> {
     checks.push(RawCheck {
         id: "security.sip",
         label: "System Integrity Protection",
-        status: if sip.to_lowercase().contains("enabled") { "pass" } else { "fail" },
+        status: if sip.to_lowercase().contains("enabled") {
+            "pass"
+        } else {
+            "fail"
+        },
         detail: sip,
     });
 
@@ -129,7 +148,11 @@ fn run_macos_checks() -> Vec<RawCheck> {
     checks.push(RawCheck {
         id: "security.gatekeeper",
         label: "Gatekeeper",
-        status: if gk.to_lowercase().contains("enabled") { "pass" } else { "fail" },
+        status: if gk.to_lowercase().contains("enabled") {
+            "pass"
+        } else {
+            "fail"
+        },
         detail: gk,
     });
 
@@ -150,7 +173,13 @@ fn run_macos_checks() -> Vec<RawCheck> {
             ("pass", format!("Requires password after {} seconds", secs))
         } else {
             let mins = secs / 60;
-            ("warn", format!("Requires password after {} minutes — consider reducing to 5 minutes or less", mins))
+            (
+                "warn",
+                format!(
+                    "Requires password after {} minutes — consider reducing to 5 minutes or less",
+                    mins
+                ),
+            )
         }
     } else if sl_lower.contains("immediate") {
         ("pass", "Requires password immediately".to_string())
@@ -166,10 +195,8 @@ fn run_macos_checks() -> Vec<RawCheck> {
     });
 
     // XProtect
-    let xp_exists = std::path::Path::new(
-        "/Library/Apple/System/Library/CoreServices/XProtect.bundle",
-    )
-    .exists();
+    let xp_exists =
+        std::path::Path::new("/Library/Apple/System/Library/CoreServices/XProtect.bundle").exists();
     checks.push(RawCheck {
         id: "security.xprotect",
         label: "XProtect",
@@ -195,7 +222,11 @@ fn run_windows_checks() -> Vec<RawCheck> {
     checks.push(RawCheck {
         id: "security.defender",
         label: "Windows Defender",
-        status: if defender.trim().eq_ignore_ascii_case("true") { "pass" } else { "fail" },
+        status: if defender.trim().eq_ignore_ascii_case("true") {
+            "pass"
+        } else {
+            "fail"
+        },
         detail: format!("RealTimeProtection: {}", defender.trim()),
     });
 
@@ -204,7 +235,11 @@ fn run_windows_checks() -> Vec<RawCheck> {
     checks.push(RawCheck {
         id: "security.bitlocker",
         label: "BitLocker Encryption",
-        status: if bl.trim() == "On" || bl.trim() == "1" { "pass" } else { "fail" },
+        status: if bl.trim() == "On" || bl.trim() == "1" {
+            "pass"
+        } else {
+            "fail"
+        },
         detail: format!("BitLocker C: {}", bl.trim()),
     });
 
@@ -259,7 +294,9 @@ fn run_linux_checks() -> Vec<RawCheck> {
         checks.push(RawCheck {
             id: "security.firewall",
             label: "Firewall (UFW)",
-            status: if fw.to_lowercase().contains("active") && !fw.to_lowercase().contains("inactive") {
+            status: if fw.to_lowercase().contains("active")
+                && !fw.to_lowercase().contains("inactive")
+            {
                 "pass"
             } else {
                 "fail"
@@ -268,7 +305,14 @@ fn run_linux_checks() -> Vec<RawCheck> {
         });
     } else {
         // Check iptables — if there are rules beyond the default ACCEPT policies, firewall is active
-        let ipt = run_cmd("sh", &["-c", "iptables -L -n 2>/dev/null | grep -cE '^(ACCEPT|DROP|REJECT|LOG)' || echo 0"], "0");
+        let ipt = run_cmd(
+            "sh",
+            &[
+                "-c",
+                "iptables -L -n 2>/dev/null | grep -cE '^(ACCEPT|DROP|REJECT|LOG)' || echo 0",
+            ],
+            "0",
+        );
         let rule_count: i32 = ipt.trim().parse().unwrap_or(0);
         checks.push(RawCheck {
             id: "security.firewall",
@@ -283,7 +327,14 @@ fn run_linux_checks() -> Vec<RawCheck> {
     }
 
     // AppArmor or SELinux
-    let aa = run_cmd("sh", &["-c", "cat /sys/module/apparmor/parameters/enabled 2>/dev/null"], "");
+    let aa = run_cmd(
+        "sh",
+        &[
+            "-c",
+            "cat /sys/module/apparmor/parameters/enabled 2>/dev/null",
+        ],
+        "",
+    );
     let se = run_cmd("sh", &["-c", "getenforce 2>/dev/null"], "");
     if aa.trim() == "Y" {
         checks.push(RawCheck {
@@ -316,8 +367,22 @@ fn run_linux_checks() -> Vec<RawCheck> {
     }
 
     // SSH root login
-    let sshd_config = run_cmd("sh", &["-c", "grep -i '^PermitRootLogin' /etc/ssh/sshd_config 2>/dev/null"], "");
-    let sshd_running = run_cmd("sh", &["-c", "systemctl is-active sshd 2>/dev/null || systemctl is-active ssh 2>/dev/null"], "");
+    let sshd_config = run_cmd(
+        "sh",
+        &[
+            "-c",
+            "grep -i '^PermitRootLogin' /etc/ssh/sshd_config 2>/dev/null",
+        ],
+        "",
+    );
+    let sshd_running = run_cmd(
+        "sh",
+        &[
+            "-c",
+            "systemctl is-active sshd 2>/dev/null || systemctl is-active ssh 2>/dev/null",
+        ],
+        "",
+    );
     if sshd_running.trim() == "active" {
         let root_ok = sshd_config.to_lowercase();
         let status = if root_ok.contains("no") || root_ok.contains("prohibit-password") {
@@ -343,7 +408,14 @@ fn run_linux_checks() -> Vec<RawCheck> {
     // Unattended upgrades (Debian/Ubuntu)
     let ua = std::path::Path::new("/etc/apt/apt.conf.d/20auto-upgrades").exists();
     let ua_enabled = if ua {
-        let content = run_cmd("sh", &["-c", "grep -i 'Unattended-Upgrade.*1' /etc/apt/apt.conf.d/20auto-upgrades 2>/dev/null"], "");
+        let content = run_cmd(
+            "sh",
+            &[
+                "-c",
+                "grep -i 'Unattended-Upgrade.*1' /etc/apt/apt.conf.d/20auto-upgrades 2>/dev/null",
+            ],
+            "",
+        );
         !content.is_empty()
     } else {
         false

@@ -13,10 +13,7 @@ pub async fn get_changes(
 }
 
 #[tauri::command]
-pub async fn undo_change(
-    state: State<'_, AppState>,
-    change_id: String,
-) -> Result<(), String> {
+pub async fn undo_change(state: State<'_, AppState>, change_id: String) -> Result<(), String> {
     let conn = state.db.lock().await;
     journal::mark_undone(&conn, &change_id).map_err(|e| format!("Failed to undo change: {}", e))
 }

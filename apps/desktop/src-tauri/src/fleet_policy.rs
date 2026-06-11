@@ -269,7 +269,8 @@ mod tests {
             condition: Some(serde_json::from_value(json!({"command_pattern": "sudo *"})).unwrap()),
         }]);
         // Matches
-        let result = resolve_safety_effect(&policy, "shell_run", &json!({"command": "sudo rm -rf /"}));
+        let result =
+            resolve_safety_effect(&policy, "shell_run", &json!({"command": "sudo rm -rf /"}));
         assert_eq!(result, Some(SafetyEffect::Block));
         // Doesn't match
         let result = resolve_safety_effect(&policy, "shell_run", &json!({"command": "ls -la"}));

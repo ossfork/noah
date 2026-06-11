@@ -9,8 +9,7 @@ use noah_tools::{ChangeRecord, SafetyTier, Tool, ToolResult};
 
 /// Extract CPU model and core count from /proc/cpuinfo.
 fn read_cpu_info() -> (String, usize) {
-    let cpuinfo = std::fs::read_to_string("/proc/cpuinfo")
-        .unwrap_or_default();
+    let cpuinfo = std::fs::read_to_string("/proc/cpuinfo").unwrap_or_default();
 
     let model = cpuinfo
         .lines()
@@ -35,14 +34,11 @@ pub(super) fn read_mem_info() -> String {
     };
 
     let get_kb = |key: &str| -> Option<u64> {
-        meminfo
-            .lines()
-            .find(|l| l.starts_with(key))
-            .and_then(|l| {
-                l.split_whitespace()
-                    .nth(1)
-                    .and_then(|v| v.parse::<u64>().ok())
-            })
+        meminfo.lines().find(|l| l.starts_with(key)).and_then(|l| {
+            l.split_whitespace()
+                .nth(1)
+                .and_then(|v| v.parse::<u64>().ok())
+        })
     };
 
     let total = get_kb("MemTotal:");
@@ -63,7 +59,9 @@ pub(super) fn read_mem_info() -> String {
         let used = t.saturating_sub(a);
         parts.push(format!(
             "Total: {}  Used: {}  Available: {}",
-            fmt_gb(t), fmt_gb(used), fmt_gb(a)
+            fmt_gb(t),
+            fmt_gb(used),
+            fmt_gb(a)
         ));
     }
     if let (Some(st), Some(sf)) = (swap_total, swap_free) {
@@ -71,7 +69,9 @@ pub(super) fn read_mem_info() -> String {
             let su = st.saturating_sub(sf);
             parts.push(format!(
                 "Swap:  Total: {}  Used: {}  Free: {}",
-                fmt_gb(st), fmt_gb(su), fmt_gb(sf)
+                fmt_gb(st),
+                fmt_gb(su),
+                fmt_gb(sf)
             ));
         }
     }
@@ -317,7 +317,9 @@ impl Tool for LinuxKillProcess {
                 if o.status.success() {
                     format!(
                         "Process {} killed with signal {}.\n\nProcess info:\n{}",
-                        pid, signal, ps_info.trim()
+                        pid,
+                        signal,
+                        ps_info.trim()
                     )
                 } else {
                     let stderr = String::from_utf8_lossy(&o.stderr).to_string();

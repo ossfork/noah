@@ -114,7 +114,11 @@ impl Tool for LinuxPing {
             .map(|o| {
                 let stdout = String::from_utf8_lossy(&o.stdout).to_string();
                 let stderr = String::from_utf8_lossy(&o.stderr).to_string();
-                if stdout.is_empty() { stderr } else { stdout }
+                if stdout.is_empty() {
+                    stderr
+                } else {
+                    stdout
+                }
             })
             .unwrap_or_else(|e| format!("ping failed: {}", e));
 
@@ -180,7 +184,11 @@ impl Tool for LinuxDnsCheck {
                     format!(
                         "DNS lookup for '{}':\n{}",
                         domain,
-                        unique.iter().map(|ip| format!("  → {}", ip)).collect::<Vec<_>>().join("\n")
+                        unique
+                            .iter()
+                            .map(|ip| format!("  → {}", ip))
+                            .collect::<Vec<_>>()
+                            .join("\n")
                     )
                 }
             }
@@ -199,8 +207,7 @@ impl Tool for LinuxDnsCheck {
 
         let output = format!(
             "{}\n\n=== Configured Nameservers ===\n{}",
-            resolution,
-            nameservers
+            resolution, nameservers
         );
 
         Ok(ToolResult::read_only(
@@ -323,9 +330,7 @@ impl Tool for LinuxFlushDns {
 
     async fn execute(&self, _input: &Value) -> Result<ToolResult> {
         // Try systemd-resolved first (most modern distros)
-        let resolved = Command::new("resolvectl")
-            .arg("flush-caches")
-            .output();
+        let resolved = Command::new("resolvectl").arg("flush-caches").output();
 
         let msg = match resolved {
             Ok(o) if o.status.success() => {
@@ -333,9 +338,7 @@ impl Tool for LinuxFlushDns {
             }
             _ => {
                 // Fall back to nscd
-                let nscd = Command::new("nscd")
-                    .args(["--invalidate=hosts"])
-                    .output();
+                let nscd = Command::new("nscd").args(["--invalidate=hosts"]).output();
                 match nscd {
                     Ok(o) if o.status.success() => {
                         "DNS cache flushed successfully (nscd).".to_string()

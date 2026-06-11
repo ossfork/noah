@@ -23,7 +23,11 @@ fn run_cmd(program: &str, args: &[&str], fallback: &str) -> String {
     match cmd.output() {
         Ok(output) if output.status.success() => {
             let s = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if s.is_empty() { fallback.to_string() } else { s }
+            if s.is_empty() {
+                fallback.to_string()
+            } else {
+                s
+            }
         }
         _ => fallback.to_string(),
     }
@@ -42,27 +46,39 @@ struct RawCheck {
 }
 
 #[allow(clippy::type_complexity)]
-fn checks_to_results(checks: &[RawCheck], generation: i64) -> Vec<(
-    String, Option<String>, Option<String>, Option<f64>,
-    Option<String>, Option<String>, bool, i64,
+fn checks_to_results(
+    checks: &[RawCheck],
+    generation: i64,
+) -> Vec<(
+    String,
+    Option<String>,
+    Option<String>,
+    Option<f64>,
+    Option<String>,
+    Option<String>,
+    bool,
+    i64,
 )> {
-    checks.iter().map(|c| {
-        let score = match c.status {
-            "pass" => 100.0,
-            "warn" => 50.0,
-            _ => 0.0,
-        };
-        (
-            c.id.to_string(),
-            Some("updates".to_string()),
-            Some(c.label.to_string()),
-            Some(score),
-            Some(c.status.to_string()),
-            Some(c.detail.clone()),
-            false,
-            generation,
-        )
-    }).collect()
+    checks
+        .iter()
+        .map(|c| {
+            let score = match c.status {
+                "pass" => 100.0,
+                "warn" => 50.0,
+                _ => 0.0,
+            };
+            (
+                c.id.to_string(),
+                Some("updates".to_string()),
+                Some(c.label.to_string()),
+                Some(score),
+                Some(c.status.to_string()),
+                Some(c.detail.clone()),
+                false,
+                generation,
+            )
+        })
+        .collect()
 }
 
 // ── macOS checks ────────────────────────────────────────────────────
@@ -154,11 +170,13 @@ fn run_macos_checks(budget: Duration) -> Vec<RawCheck> {
                     detail: "All packages up to date".to_string(),
                 });
             } else if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&outdated) {
-                let formula_count = parsed.get("formulae")
+                let formula_count = parsed
+                    .get("formulae")
                     .and_then(|f| f.as_array())
                     .map(|a| a.len())
                     .unwrap_or(0);
-                let cask_count = parsed.get("casks")
+                let cask_count = parsed
+                    .get("casks")
                     .and_then(|c| c.as_array())
                     .map(|a| a.len())
                     .unwrap_or(0);
@@ -176,7 +194,11 @@ fn run_macos_checks(budget: Duration) -> Vec<RawCheck> {
                         id: "updates.brew",
                         label: "Homebrew Packages",
                         status: if total >= 10 { "fail" } else { "warn" },
-                        detail: format!("{} outdated package{}", total, if total == 1 { "" } else { "s" }),
+                        detail: format!(
+                            "{} outdated package{}",
+                            total,
+                            if total == 1 { "" } else { "s" }
+                        ),
                     });
                 }
             } else {
@@ -253,10 +275,24 @@ fn run_linux_checks(_budget: Duration) -> Vec<RawCheck> {
 
     // Try apt (Debian/Ubuntu), then dnf (Fedora/RHEL), then pacman (Arch)
     let (count, pkg_mgr) = if std::path::Path::new("/usr/bin/apt").exists() {
-        let out = run_cmd("sh", &["-c", "apt list --upgradable 2>/dev/null | grep -c upgradable"], "");
+        let out = run_cmd(
+            "sh",
+            &[
+                "-c",
+                "apt list --upgradable 2>/dev/null | grep -c upgradable",
+            ],
+            "",
+        );
         (out.trim().parse::<i32>().unwrap_or(-1), "apt")
     } else if std::path::Path::new("/usr/bin/dnf").exists() {
-        let out = run_cmd("sh", &["-c", "dnf check-update --quiet 2>/dev/null | grep -cE '^[a-zA-Z]' || echo 0"], "0");
+        let out = run_cmd(
+            "sh",
+            &[
+                "-c",
+                "dnf check-update --quiet 2>/dev/null | grep -cE '^[a-zA-Z]' || echo 0",
+            ],
+            "0",
+        );
         (out.trim().parse::<i32>().unwrap_or(-1), "dnf")
     } else if std::path::Path::new("/usr/bin/pacman").exists() {
         let out = run_cmd("sh", &["-c", "pacman -Qu 2>/dev/null | wc -l"], "");
@@ -269,7 +305,13 @@ fn run_linux_checks(_budget: Duration) -> Vec<RawCheck> {
         checks.push(RawCheck {
             id: "updates.os",
             label: "System Updates",
-            status: if count == 0 { "pass" } else if count < 10 { "warn" } else { "fail" },
+            status: if count == 0 {
+                "pass"
+            } else if count < 10 {
+                "warn"
+            } else {
+                "fail"
+            },
             detail: if count == 0 {
                 format!("Up to date ({})", pkg_mgr)
             } else {

@@ -35,7 +35,8 @@ impl Tool for WinSystemInfo {
         // WindowsProductName is broken on Windows 11 (reports "Windows 10").
         let info = super::hidden_cmd("powershell")
             .args([
-                "-NoProfile", "-Command",
+                "-NoProfile",
+                "-Command",
                 "$os = Get-CimInstance Win32_OperatingSystem; \
                 $cpu = Get-CimInstance Win32_Processor; \
                 $cs = Get-CimInstance Win32_ComputerSystem; \
@@ -53,10 +54,7 @@ impl Tool for WinSystemInfo {
 
         let output = format!("=== Windows System Info ===\n{}", info);
 
-        Ok(ToolResult::read_only(
-            output,
-            json!({ "raw_output": info }),
-        ))
+        Ok(ToolResult::read_only(output, json!({ "raw_output": info })))
     }
 }
 
@@ -96,7 +94,11 @@ impl Tool for WinProcessList {
     async fn execute(&self, input: &Value) -> Result<ToolResult> {
         let sort_by = input["sort_by"].as_str().unwrap_or("cpu");
 
-        let sort_prop = if sort_by == "mem" { "WorkingSet64" } else { "CPU" };
+        let sort_prop = if sort_by == "mem" {
+            "WorkingSet64"
+        } else {
+            "CPU"
+        };
 
         let ps_cmd = format!(
             "Get-Process | Sort-Object {} -Descending | Select-Object -First 25 \
@@ -115,7 +117,8 @@ impl Tool for WinProcessList {
 
         let combined = format!(
             "=== Top Processes (sorted by {}) ===\n{}",
-            sort_by, output.trim()
+            sort_by,
+            output.trim()
         );
 
         Ok(ToolResult::read_only(
@@ -215,7 +218,8 @@ impl Tool for WinKillProcess {
         // Get process info before killing
         let ps_info = super::hidden_cmd("powershell")
             .args([
-                "-NoProfile", "-Command",
+                "-NoProfile",
+                "-Command",
                 &format!(
                     "Get-Process -Id {} -ErrorAction SilentlyContinue | \
                     Select-Object Id, ProcessName, CPU, \
@@ -238,7 +242,11 @@ impl Tool for WinKillProcess {
                         "Process {} terminated.\n\nProcess info:\n{}{}",
                         pid,
                         ps_info.trim(),
-                        if !stdout.trim().is_empty() { format!("\n{}", stdout.trim()) } else { String::new() }
+                        if !stdout.trim().is_empty() {
+                            format!("\n{}", stdout.trim())
+                        } else {
+                            String::new()
+                        }
                     )
                 } else {
                     let stderr = String::from_utf8_lossy(&o.stderr).to_string();
@@ -287,8 +295,9 @@ impl Tool for WinClearCaches {
 
     async fn execute(&self, _input: &Value) -> Result<ToolResult> {
         // Get user TEMP directory
-        let user_temp = std::env::var("TEMP")
-            .unwrap_or_else(|_| std::env::var("TMP").unwrap_or_else(|_| "C:\\Windows\\Temp".to_string()));
+        let user_temp = std::env::var("TEMP").unwrap_or_else(|_| {
+            std::env::var("TMP").unwrap_or_else(|_| "C:\\Windows\\Temp".to_string())
+        });
 
         // Get size before clearing
         let before_size = super::hidden_cmd("powershell")
@@ -312,7 +321,8 @@ impl Tool for WinClearCaches {
         // Clear user temp
         let clear_result = super::hidden_cmd("powershell")
             .args([
-                "-NoProfile", "-Command",
+                "-NoProfile",
+                "-Command",
                 &format!(
                     "$ErrorActionPreference = 'SilentlyContinue'; \
                     $removed = 0; $failed = 0; \
@@ -344,7 +354,10 @@ impl Tool for WinClearCaches {
                 "before_size": before_size,
             }),
             vec![ChangeRecord {
-                description: format!("Cleared temp files from {} and C:\\Windows\\Temp", user_temp),
+                description: format!(
+                    "Cleared temp files from {} and C:\\Windows\\Temp",
+                    user_temp
+                ),
                 undo_tool: String::new(),
                 undo_input: json!(null),
             }],

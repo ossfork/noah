@@ -39,10 +39,7 @@ impl Tool for WebFetchTool {
     }
 
     async fn execute(&self, input: &Value) -> Result<ToolResult> {
-        let url = input
-            .get("url")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let url = input.get("url").and_then(|v| v.as_str()).unwrap_or("");
 
         if url.is_empty() {
             bail!("Missing required parameter: url");
@@ -79,7 +76,11 @@ impl Tool for WebFetchTool {
         let status = response.status();
         if !status.is_success() {
             return Ok(ToolResult::read_only(
-                format!("Server returned HTTP {} {}.", status.as_u16(), status.canonical_reason().unwrap_or("")),
+                format!(
+                    "Server returned HTTP {} {}.",
+                    status.as_u16(),
+                    status.canonical_reason().unwrap_or("")
+                ),
                 json!({"error": "http_error", "status": status.as_u16()}),
             ));
         }
@@ -139,7 +140,9 @@ impl Tool for WebFetchTool {
         }
 
         if truncated {
-            text.push_str("\n\n(content truncated — original page was longer than 100K characters)");
+            text.push_str(
+                "\n\n(content truncated — original page was longer than 100K characters)",
+            );
         }
 
         Ok(ToolResult::read_only(
@@ -154,13 +157,21 @@ async fn read_limited_body(response: reqwest::Response, limit: usize) -> Result<
     // Check content-length header first for early rejection
     if let Some(len) = response.content_length() {
         if len as usize > limit {
-            bail!("Response too large ({} bytes, limit is {} bytes)", len, limit);
+            bail!(
+                "Response too large ({} bytes, limit is {} bytes)",
+                len,
+                limit
+            );
         }
     }
 
     let bytes = response.bytes().await?;
     if bytes.len() > limit {
-        bail!("Response too large ({} bytes, limit is {} bytes)", bytes.len(), limit);
+        bail!(
+            "Response too large ({} bytes, limit is {} bytes)",
+            bytes.len(),
+            limit
+        );
     }
     Ok(bytes.to_vec())
 }

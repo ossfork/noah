@@ -602,7 +602,12 @@ pub fn update_session_compressed_summary(
 }
 
 /// Mark a session as ended.
-pub fn end_session_record(conn: &Connection, id: &str, ended_at: &str, message_count: i32) -> Result<()> {
+pub fn end_session_record(
+    conn: &Connection,
+    id: &str,
+    ended_at: &str,
+    message_count: i32,
+) -> Result<()> {
     conn.execute(
         "UPDATE sessions SET ended_at = ?1, message_count = ?2 WHERE id = ?3",
         rusqlite::params![ended_at, message_count, id],
@@ -623,12 +628,21 @@ pub fn mark_session_resolved(conn: &Connection, id: &str, resolved: bool) -> Res
 
 /// Delete a session and all its related data (messages, journal entries, traces).
 pub fn delete_session(conn: &Connection, id: &str) -> Result<()> {
-    conn.execute("DELETE FROM messages WHERE session_id = ?1", rusqlite::params![id])
-        .context("Failed to delete messages")?;
-    conn.execute("DELETE FROM journal WHERE session_id = ?1", rusqlite::params![id])
-        .context("Failed to delete journal entries")?;
-    conn.execute("DELETE FROM llm_traces WHERE session_id = ?1", rusqlite::params![id])
-        .context("Failed to delete traces")?;
+    conn.execute(
+        "DELETE FROM messages WHERE session_id = ?1",
+        rusqlite::params![id],
+    )
+    .context("Failed to delete messages")?;
+    conn.execute(
+        "DELETE FROM journal WHERE session_id = ?1",
+        rusqlite::params![id],
+    )
+    .context("Failed to delete journal entries")?;
+    conn.execute(
+        "DELETE FROM llm_traces WHERE session_id = ?1",
+        rusqlite::params![id],
+    )
+    .context("Failed to delete traces")?;
     conn.execute("DELETE FROM sessions WHERE id = ?1", rusqlite::params![id])
         .context("Failed to delete session")?;
     Ok(())
@@ -869,7 +883,10 @@ mod tests {
         assert_eq!(entries[0].id, id);
         assert_eq!(entries[0].session_id, "session-1");
         assert_eq!(entries[0].tool_name, "mac_flush_dns");
-        assert_eq!(entries[0].description, "Set DNS to 8.8.8.8 (was 192.168.1.1)");
+        assert_eq!(
+            entries[0].description,
+            "Set DNS to 8.8.8.8 (was 192.168.1.1)"
+        );
         assert_eq!(entries[0].undo_tool, "mac_set_dns");
         assert!(!entries[0].undone);
     }
@@ -1071,8 +1088,7 @@ mod tests {
     #[test]
     fn test_dismiss_proactive_suggestion() {
         let conn = test_db();
-        insert_proactive_suggestion(&conn, "sug-2", "perf", "High CPU", "Details", "raw")
-            .unwrap();
+        insert_proactive_suggestion(&conn, "sug-2", "perf", "High CPU", "Details", "raw").unwrap();
 
         dismiss_proactive_suggestion(&conn, "sug-2").unwrap();
 
@@ -1137,7 +1153,14 @@ mod tests {
         let obj = json.as_object().unwrap();
 
         // These are the exact keys the TS ChangeEntry interface expects
-        for key in ["id", "session_id", "timestamp", "tool_name", "description", "undone"] {
+        for key in [
+            "id",
+            "session_id",
+            "timestamp",
+            "tool_name",
+            "description",
+            "undone",
+        ] {
             assert!(obj.contains_key(key), "Missing expected key: {}", key);
         }
         // Must NOT have camelCase variants
@@ -1224,11 +1247,7 @@ mod tests {
 // ── Telemetry & Settings ─────────────────────────────────────────────────
 
 /// Record an anonymous telemetry event (stored locally).
-pub fn record_telemetry_event(
-    conn: &Connection,
-    event_type: &str,
-    data: &str,
-) -> Result<()> {
+pub fn record_telemetry_event(conn: &Connection, event_type: &str, data: &str) -> Result<()> {
     let id = Uuid::new_v4().to_string();
     let timestamp = chrono::Utc::now().to_rfc3339();
 
@@ -1435,7 +1454,8 @@ pub fn list_scan_jobs(conn: &Connection) -> Result<Vec<ScanJobRecord>> {
         })
     })?;
 
-    rows.collect::<std::result::Result<Vec<_>, _>>().map_err(Into::into)
+    rows.collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(Into::into)
 }
 
 // ── System Scan Results ──────────────────────────────────────────────
@@ -1458,7 +1478,20 @@ pub struct ScanResult {
 
 /// Insert a batch of scan results, replacing any existing rows for the same paths within a scan_type.
 #[allow(clippy::type_complexity)]
-pub fn upsert_scan_results(conn: &Connection, scan_type: &str, results: &[(String, Option<String>, Option<String>, Option<f64>, Option<String>, Option<String>, bool, i64)]) -> Result<()> {
+pub fn upsert_scan_results(
+    conn: &Connection,
+    scan_type: &str,
+    results: &[(
+        String,
+        Option<String>,
+        Option<String>,
+        Option<f64>,
+        Option<String>,
+        Option<String>,
+        bool,
+        i64,
+    )],
+) -> Result<()> {
     let now = chrono::Utc::now().to_rfc3339();
     let mut stmt = conn.prepare(
         "INSERT OR REPLACE INTO system_scan_results (scan_type, category, path, key, value_num, value_text, metadata, stale, scanned_at, generation)
@@ -1544,16 +1577,18 @@ pub fn query_scan_results(
         })
     })?;
 
-    rows.collect::<std::result::Result<Vec<_>, _>>().map_err(Into::into)
+    rows.collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(Into::into)
 }
 
 /// Get the timestamp of the most recent scan result for a scan_type.
 #[allow(dead_code)]
 pub fn latest_scan_timestamp(conn: &Connection, scan_type: &str) -> Result<Option<String>> {
-    let mut stmt = conn.prepare(
-        "SELECT MAX(scanned_at) FROM system_scan_results WHERE scan_type = ?1",
-    )?;
-    let mut rows = stmt.query_map(rusqlite::params![scan_type], |row| row.get::<_, Option<String>>(0))?;
+    let mut stmt =
+        conn.prepare("SELECT MAX(scanned_at) FROM system_scan_results WHERE scan_type = ?1")?;
+    let mut rows = stmt.query_map(rusqlite::params![scan_type], |row| {
+        row.get::<_, Option<String>>(0)
+    })?;
     match rows.next() {
         Some(Ok(ts)) => Ok(ts),
         Some(Err(e)) => Err(e.into()),
@@ -1610,7 +1645,8 @@ pub fn list_health_scores(conn: &Connection, limit: usize) -> Result<Vec<HealthS
         })
     })?;
 
-    rows.collect::<std::result::Result<Vec<_>, _>>().map_err(Into::into)
+    rows.collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(Into::into)
 }
 
 // ── Auto-heal runs ──────────────────────────────────────────────────
@@ -1699,5 +1735,6 @@ pub fn list_auto_heal_runs(conn: &Connection, limit: usize) -> Result<Vec<AutoHe
         })
     })?;
 
-    rows.collect::<std::result::Result<Vec<_>, _>>().map_err(Into::into)
+    rows.collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(Into::into)
 }

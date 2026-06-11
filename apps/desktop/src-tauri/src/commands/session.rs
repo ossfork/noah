@@ -57,10 +57,7 @@ pub async fn get_session(
 }
 
 #[tauri::command]
-pub async fn end_session(
-    state: State<'_, AppState>,
-    session_id: String,
-) -> Result<bool, String> {
+pub async fn end_session(state: State<'_, AppState>, session_id: String) -> Result<bool, String> {
     let mut orchestrator = state.orchestrator.lock().await;
 
     // Capture message count before ending (which removes the session from memory).
@@ -89,9 +86,14 @@ pub async fn end_session(
         if let Some(config) = DashboardConfig::load(&state.app_dir) {
             let sid = session_id.clone();
             let title = session_record.as_ref().and_then(|s| s.title.clone());
-            let summary = session_record.as_ref().and_then(|s| s.compressed_summary.clone());
+            let summary = session_record
+                .as_ref()
+                .and_then(|s| s.compressed_summary.clone());
             let resolved = session_record.as_ref().and_then(|s| s.resolved);
-            let created_at = session_record.as_ref().map(|s| s.created_at.clone()).unwrap_or_default();
+            let created_at = session_record
+                .as_ref()
+                .map(|s| s.created_at.clone())
+                .unwrap_or_default();
             let ended = ended_at.clone();
 
             // Finalize playbook run report if a playbook was activated during this session.
@@ -103,14 +105,23 @@ pub async fn end_session(
             let config_clone = config.clone();
             tokio::spawn(async move {
                 if let Err(e) = dashboard_link::push_session_report(
-                    &config, &sid, title.as_deref(), summary.as_deref(),
-                    message_count, resolved, &created_at, Some(&ended),
-                ).await {
+                    &config,
+                    &sid,
+                    title.as_deref(),
+                    summary.as_deref(),
+                    message_count,
+                    resolved,
+                    &created_at,
+                    Some(&ended),
+                )
+                .await
+                {
                     eprintln!("[fleet] Failed to push session report: {}", e);
                 }
                 // Push playbook run report to fleet
                 if let Some(report) = run_report {
-                    if let Err(e) = dashboard_link::push_playbook_run(&config_clone, &report).await {
+                    if let Err(e) = dashboard_link::push_playbook_run(&config_clone, &report).await
+                    {
                         eprintln!("[fleet] Failed to push playbook run report: {}", e);
                     }
                 }
@@ -133,8 +144,7 @@ pub async fn get_session_messages(
     session_id: String,
 ) -> Result<Vec<MessageRecord>, String> {
     let conn = state.db.lock().await;
-    journal::get_messages(&conn, &session_id)
-        .map_err(|e| format!("Failed to load messages: {}", e))
+    journal::get_messages(&conn, &session_id).map_err(|e| format!("Failed to load messages: {}", e))
 }
 
 #[tauri::command]
@@ -193,15 +203,31 @@ pub async fn mark_resolved(
     if let Some(config) = DashboardConfig::load(&state.app_dir) {
         let sid = session_id.clone();
         let title = session_record.as_ref().and_then(|s| s.title.clone());
-        let summary = session_record.as_ref().and_then(|s| s.compressed_summary.clone());
-        let message_count = session_record.as_ref().map(|s| s.message_count).unwrap_or(0);
-        let created_at = session_record.as_ref().map(|s| s.created_at.clone()).unwrap_or_default();
+        let summary = session_record
+            .as_ref()
+            .and_then(|s| s.compressed_summary.clone());
+        let message_count = session_record
+            .as_ref()
+            .map(|s| s.message_count)
+            .unwrap_or(0);
+        let created_at = session_record
+            .as_ref()
+            .map(|s| s.created_at.clone())
+            .unwrap_or_default();
         let ended_at = session_record.as_ref().and_then(|s| s.ended_at.clone());
         tokio::spawn(async move {
             if let Err(e) = dashboard_link::push_session_report(
-                &config, &sid, title.as_deref(), summary.as_deref(),
-                message_count, Some(resolved), &created_at, ended_at.as_deref(),
-            ).await {
+                &config,
+                &sid,
+                title.as_deref(),
+                summary.as_deref(),
+                message_count,
+                Some(resolved),
+                &created_at,
+                ended_at.as_deref(),
+            )
+            .await
+            {
                 eprintln!("[fleet] Failed to push session resolved update: {}", e);
             }
         });
@@ -222,10 +248,7 @@ pub async fn rename_session(
 }
 
 #[tauri::command]
-pub async fn delete_session(
-    state: State<'_, AppState>,
-    session_id: String,
-) -> Result<(), String> {
+pub async fn delete_session(state: State<'_, AppState>, session_id: String) -> Result<(), String> {
     let conn = state.db.lock().await;
     journal::delete_session(&conn, &session_id)
         .map_err(|e| format!("Failed to delete session: {}", e))
@@ -239,16 +262,14 @@ pub async fn export_session(
     let conn = state.db.lock().await;
 
     // Get session metadata
-    let sessions = journal::list_sessions(&conn)
-        .map_err(|e| format!("Failed to list sessions: {}", e))?;
+    let sessions =
+        journal::list_sessions(&conn).map_err(|e| format!("Failed to list sessions: {}", e))?;
     let session = sessions.iter().find(|s| s.id == session_id);
 
     let title = session
         .and_then(|s| s.title.as_deref())
         .unwrap_or("Untitled Session");
-    let created = session
-        .map(|s| s.created_at.as_str())
-        .unwrap_or("Unknown");
+    let created = session.map(|s| s.created_at.as_str()).unwrap_or("Unknown");
 
     // Get messages
     let messages = journal::get_messages(&conn, &session_id)

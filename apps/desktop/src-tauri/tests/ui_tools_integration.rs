@@ -11,10 +11,22 @@ fn ui_tools_register_in_router() {
     noah_desktop_lib::ui_tools::register_ui_tools(&mut router);
 
     // All 4 UI tools should be registered
-    assert!(router.find_tool("ui_spa").is_some(), "ui_spa not registered");
-    assert!(router.find_tool("ui_user_question").is_some(), "ui_user_question not registered");
-    assert!(router.find_tool("ui_info").is_some(), "ui_info not registered");
-    assert!(router.find_tool("ui_done").is_some(), "ui_done not registered");
+    assert!(
+        router.find_tool("ui_spa").is_some(),
+        "ui_spa not registered"
+    );
+    assert!(
+        router.find_tool("ui_user_question").is_some(),
+        "ui_user_question not registered"
+    );
+    assert!(
+        router.find_tool("ui_info").is_some(),
+        "ui_info not registered"
+    );
+    assert!(
+        router.find_tool("ui_done").is_some(),
+        "ui_done not registered"
+    );
 }
 
 #[test]
@@ -44,10 +56,7 @@ fn ui_tools_have_valid_schemas() {
     noah_desktop_lib::ui_tools::register_ui_tools(&mut router);
 
     let defs = router.tool_definitions();
-    let ui_defs: Vec<_> = defs
-        .iter()
-        .filter(|d| d.name.starts_with("ui_"))
-        .collect();
+    let ui_defs: Vec<_> = defs.iter().filter(|d| d.name.starts_with("ui_")).collect();
 
     assert_eq!(ui_defs.len(), 4, "Expected 4 UI tool definitions");
 
@@ -88,10 +97,16 @@ async fn ui_spa_tool_executes_correctly() {
 
     assert_eq!(payload["kind"], "spa");
     assert_eq!(payload["situation"], "Your DNS cache is stale.");
-    assert_eq!(payload["plan"], "Flush DNS cache to resolve name resolution issues.");
+    assert_eq!(
+        payload["plan"],
+        "Flush DNS cache to resolve name resolution issues."
+    );
     assert_eq!(payload["action"]["label"], "Fix it");
     assert_eq!(payload["action"]["type"], "RUN_STEP");
-    assert!(result.changes.is_empty(), "UI tools should not produce changes");
+    assert!(
+        result.changes.is_empty(),
+        "UI tools should not produce changes"
+    );
 }
 
 #[tokio::test]
@@ -138,7 +153,10 @@ async fn ui_done_executes_correctly() {
     let payload: serde_json::Value = serde_json::from_str(&result.output).unwrap();
 
     assert_eq!(payload["kind"], "done");
-    assert!(payload["summary"].as_str().unwrap().contains("DNS cache flushed"));
+    assert!(payload["summary"]
+        .as_str()
+        .unwrap()
+        .contains("DNS cache flushed"));
 }
 
 #[tokio::test]
@@ -155,7 +173,10 @@ async fn ui_info_executes_correctly() {
     let payload: serde_json::Value = serde_json::from_str(&result.output).unwrap();
 
     assert_eq!(payload["kind"], "info");
-    assert!(payload["summary"].as_str().unwrap().contains("safety reasons"));
+    assert!(payload["summary"]
+        .as_str()
+        .unwrap()
+        .contains("safety reasons"));
 }
 
 #[tokio::test]
@@ -181,21 +202,33 @@ fn ui_payload_from_tool_call_validates() {
     use noah_desktop_lib::ui_tools::ui_payload_from_tool_call;
 
     // Valid
-    assert!(ui_payload_from_tool_call("ui_spa", &json!({
-        "situation_md": "A", "plan_md": "B",
-        "action": {"label": "Go", "type": "RUN_STEP"}
-    })).is_ok());
+    assert!(ui_payload_from_tool_call(
+        "ui_spa",
+        &json!({
+            "situation_md": "A", "plan_md": "B",
+            "action": {"label": "Go", "type": "RUN_STEP"}
+        })
+    )
+    .is_ok());
 
     // Missing situation_md
-    assert!(ui_payload_from_tool_call("ui_spa", &json!({
-        "plan_md": "B",
-        "action": {"label": "Go", "type": "RUN_STEP"}
-    })).is_err());
+    assert!(ui_payload_from_tool_call(
+        "ui_spa",
+        &json!({
+            "plan_md": "B",
+            "action": {"label": "Go", "type": "RUN_STEP"}
+        })
+    )
+    .is_err());
 
     // Missing action
-    assert!(ui_payload_from_tool_call("ui_spa", &json!({
-        "situation_md": "A", "plan_md": "B"
-    })).is_err());
+    assert!(ui_payload_from_tool_call(
+        "ui_spa",
+        &json!({
+            "situation_md": "A", "plan_md": "B"
+        })
+    )
+    .is_err());
 
     // Unknown tool
     assert!(ui_payload_from_tool_call("ui_unknown", &json!({})).is_err());

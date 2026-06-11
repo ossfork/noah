@@ -107,7 +107,11 @@ impl Tool for WinPing {
             .map(|o| {
                 let stdout = String::from_utf8_lossy(&o.stdout).to_string();
                 let stderr = String::from_utf8_lossy(&o.stderr).to_string();
-                if stdout.is_empty() { stderr } else { stdout }
+                if stdout.is_empty() {
+                    stderr
+                } else {
+                    stdout
+                }
             })
             .unwrap_or_else(|e| format!("ping failed: {}", e));
 
@@ -161,7 +165,11 @@ impl Tool for WinDnsCheck {
             .unwrap_or_else(|e| format!("nslookup failed: {}", e));
 
         let resolve = super::hidden_cmd("powershell")
-            .args(["-NoProfile", "-Command", &format!("Resolve-DnsName '{}' | Format-List", domain)])
+            .args([
+                "-NoProfile",
+                "-Command",
+                &format!("Resolve-DnsName '{}' | Format-List", domain),
+            ])
             .output()
             .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
             .unwrap_or_else(|e| format!("Resolve-DnsName failed: {}", e));
@@ -268,9 +276,7 @@ impl Tool for WinFlushDns {
     }
 
     async fn execute(&self, _input: &Value) -> Result<ToolResult> {
-        let output = super::hidden_cmd("ipconfig")
-            .arg("/flushdns")
-            .output();
+        let output = super::hidden_cmd("ipconfig").arg("/flushdns").output();
 
         let msg = match output {
             Ok(o) => {

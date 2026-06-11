@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
 use noah_tools::{SafetyTier, Tool, ToolResult};
 
@@ -101,7 +101,11 @@ impl PlaybookState {
     /// Create from a playbook's full markdown content.
     pub fn from_content(name: &str, content: &str) -> Self {
         let steps = parse_steps(content);
-        let total = if steps.is_empty() { 1 } else { steps.len() as u32 };
+        let total = if steps.is_empty() {
+            1
+        } else {
+            steps.len() as u32
+        };
         let meta = parse_frontmatter(content);
         Self {
             name: name.to_string(),
@@ -121,9 +125,11 @@ impl PlaybookState {
         }
         let step_index = (self.current_turn as usize).min(self.steps.len().saturating_sub(1));
         let step = &self.steps[step_index];
-        let all_steps: Vec<serde_json::Value> = self.steps.iter().map(|s| {
-            serde_json::json!({ "number": s.number, "label": s.label })
-        }).collect();
+        let all_steps: Vec<serde_json::Value> = self
+            .steps
+            .iter()
+            .map(|s| serde_json::json!({ "number": s.number, "label": s.label }))
+            .collect();
         let mut obj = serde_json::json!({
             "step": step.number,
             "total": self.total_steps,
@@ -326,10 +332,16 @@ fn parse_steps(content: &str) -> Vec<PlaybookStep> {
         if let Some(rest) = trimmed.strip_prefix("## ") {
             let rest = rest.trim();
             // Try "Step N: Label" or "Step N — Label" or "Step N. Label"
-            if let Some(after_step) = rest.strip_prefix("Step ").or_else(|| rest.strip_prefix("step ")) {
+            if let Some(after_step) = rest
+                .strip_prefix("Step ")
+                .or_else(|| rest.strip_prefix("step "))
+            {
                 if let Some((num_str, label)) = split_step_number(after_step) {
                     if let Ok(n) = num_str.parse::<u32>() {
-                        steps.push(PlaybookStep { number: n, label: label.to_string() });
+                        steps.push(PlaybookStep {
+                            number: n,
+                            label: label.to_string(),
+                        });
                         continue;
                     }
                 }
@@ -337,7 +349,10 @@ fn parse_steps(content: &str) -> Vec<PlaybookStep> {
             // Try "N. Label" or "N: Label"
             if let Some((num_str, label)) = split_step_number(rest) {
                 if let Ok(n) = num_str.parse::<u32>() {
-                    steps.push(PlaybookStep { number: n, label: label.to_string() });
+                    steps.push(PlaybookStep {
+                        number: n,
+                        label: label.to_string(),
+                    });
                 }
             }
         }
@@ -349,7 +364,9 @@ fn parse_steps(content: &str) -> Vec<PlaybookStep> {
 fn split_step_number(s: &str) -> Option<(&str, &str)> {
     // Find where digits end
     let num_end = s.find(|c: char| !c.is_ascii_digit()).unwrap_or(s.len());
-    if num_end == 0 { return None; }
+    if num_end == 0 {
+        return None;
+    }
     let num_str = &s[..num_end];
     let rest = s[num_end..].trim();
     // Strip separator: ":", ".", "—", "-", " "
@@ -360,7 +377,9 @@ fn split_step_number(s: &str) -> Option<(&str, &str)> {
         .or_else(|| rest.strip_prefix('-'))
         .unwrap_or(rest)
         .trim();
-    if label.is_empty() { return None; }
+    if label.is_empty() {
+        return None;
+    }
     Some((num_str, label))
 }
 
@@ -378,7 +397,9 @@ pub struct PlaybookRegistry {
 /// Skips TEMPLATE.md.
 fn scan_flat_playbooks(dir: &Path) -> Vec<(String, String)> {
     let mut results = Vec::new();
-    let Ok(entries) = std::fs::read_dir(dir) else { return results };
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return results;
+    };
     for entry in entries.flatten() {
         let path = entry.path();
         let name = entry.file_name().to_string_lossy().to_string();
@@ -404,7 +425,9 @@ fn scan_flat_playbooks(dir: &Path) -> Vec<(String, String)> {
 /// returning (folder/filename, content) pairs.
 fn scan_folder_playbooks(dir: &Path) -> Vec<(String, String)> {
     let mut results = Vec::new();
-    let Ok(entries) = std::fs::read_dir(dir) else { return results };
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return results;
+    };
     for entry in entries.flatten() {
         let path = entry.path();
         let folder_name = entry.file_name().to_string_lossy().to_string();
@@ -526,7 +549,9 @@ fn existing_file_source(path: &Path) -> Option<PlaybookSource> {
 /// Returns deduplicated metas: when multiple sources provide the same slug, highest precedence wins.
 fn scan_metas(playbooks_dir: &Path, platform: &str) -> Vec<PlaybookMeta> {
     let mut all_metas: Vec<PlaybookMeta> = Vec::new();
-    let Ok(entries) = std::fs::read_dir(playbooks_dir) else { return all_metas };
+    let Ok(entries) = std::fs::read_dir(playbooks_dir) else {
+        return all_metas;
+    };
 
     for entry in entries.flatten() {
         let path = entry.path();
@@ -604,7 +629,9 @@ impl PlaybookRegistry {
 
             // Never overwrite user-owned (local) or fleet-owned files.
             if let Some(existing_source) = existing_file_source(&dest) {
-                if existing_source == PlaybookSource::Local || existing_source == PlaybookSource::Fleet {
+                if existing_source == PlaybookSource::Local
+                    || existing_source == PlaybookSource::Fleet
+                {
                     continue;
                 }
             }
@@ -631,7 +658,9 @@ impl PlaybookRegistry {
             }
 
             if let Some(existing_source) = existing_file_source(&dest) {
-                if existing_source == PlaybookSource::Local || existing_source == PlaybookSource::Fleet {
+                if existing_source == PlaybookSource::Local
+                    || existing_source == PlaybookSource::Fleet
+                {
                     continue;
                 }
             }
@@ -719,12 +748,17 @@ impl PlaybookRegistry {
             if !path.is_file() || path.extension().is_none_or(|ext| ext != "md") {
                 continue;
             }
-            let Ok(content) = std::fs::read_to_string(&path) else { continue };
+            let Ok(content) = std::fs::read_to_string(&path) else {
+                continue;
+            };
 
             let name_matches = parse_frontmatter(&content)
                 .map(|m| m.name == name)
                 .unwrap_or(false)
-                || path.file_stem().map(|s| s.to_string_lossy() == name).unwrap_or(false);
+                || path
+                    .file_stem()
+                    .map(|s| s.to_string_lossy() == name)
+                    .unwrap_or(false);
 
             if name_matches {
                 let source = parse_frontmatter(&content)
@@ -746,7 +780,9 @@ impl PlaybookRegistry {
         if matches.len() > 1 {
             eprintln!(
                 "[playbooks] '{}': returning {} version, shadowing {} other source(s)",
-                name, matches[0].source, matches.len() - 1
+                name,
+                matches[0].source,
+                matches.len() - 1
             );
         }
         Ok(matches.remove(0).content)
@@ -802,7 +838,9 @@ impl Tool for ActivatePlaybookTool {
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("Missing required parameter: name"))?;
 
-        let content = self.registry.read()
+        let content = self
+            .registry
+            .read()
             .map_err(|e| anyhow::anyhow!("Registry lock poisoned: {}", e))?
             .read_playbook(name)?;
 
@@ -847,7 +885,8 @@ mod tests {
 
     #[test]
     fn test_parse_frontmatter_system_type() {
-        let content = "---\nname: net\ndescription: Net diag\nplatform: macos\ntype: system\n---\n\n# Body";
+        let content =
+            "---\nname: net\ndescription: Net diag\nplatform: macos\ntype: system\n---\n\n# Body";
         let meta = parse_frontmatter(content).unwrap();
         assert_eq!(meta.source, PlaybookSource::Bundled); // legacy type: system → Bundled
     }
@@ -888,8 +927,7 @@ mod tests {
 
     #[test]
     fn test_parse_frontmatter_with_platform() {
-        let content =
-            "---\nname: test\ndescription: Test\nplatform: macos\n---\n\n# Body";
+        let content = "---\nname: test\ndescription: Test\nplatform: macos\n---\n\n# Body";
         let meta = parse_frontmatter(content).unwrap();
         assert_eq!(meta.platform, "macos");
     }
@@ -917,7 +955,8 @@ mod tests {
     #[test]
     fn test_bootstrap_creates_files() {
         let tmp = tempfile::tempdir().unwrap();
-        let registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"macos").unwrap();
+        let registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
 
         // Only matching-platform files should exist on disk.
         for (filename, content) in &bundled_flat() {
@@ -932,7 +971,10 @@ mod tests {
         }
 
         // Only macos + all playbooks loaded into metas.
-        assert!(registry.metas.iter().all(|m| m.platform == "macos" || m.platform == "all"));
+        assert!(registry
+            .metas
+            .iter()
+            .all(|m| m.platform == "macos" || m.platform == "all"));
     }
 
     #[test]
@@ -945,11 +987,16 @@ mod tests {
         let stale = "---\nname: network-diagnostics\ndescription: Stale version\nplatform: macos\nsource: bundled\n---\n\n# Stale";
         std::fs::write(playbooks_dir.join("network-diagnostics.md"), stale).unwrap();
 
-        let _registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"macos").unwrap();
+        let _registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
 
         // Bundled file should be overwritten with the current shipped content.
-        let content = std::fs::read_to_string(playbooks_dir.join("network-diagnostics.md")).unwrap();
-        assert!(!content.contains("Stale version"), "Bundled playbook was not refreshed");
+        let content =
+            std::fs::read_to_string(playbooks_dir.join("network-diagnostics.md")).unwrap();
+        assert!(
+            !content.contains("Stale version"),
+            "Bundled playbook was not refreshed"
+        );
     }
 
     #[test]
@@ -962,10 +1009,15 @@ mod tests {
         let user_version = "---\nname: network-diagnostics\ndescription: My custom version\nplatform: macos\nsource: local\n---\n\n# My custom";
         std::fs::write(playbooks_dir.join("network-diagnostics.md"), user_version).unwrap();
 
-        let _registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"macos").unwrap();
+        let _registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
 
-        let content = std::fs::read_to_string(playbooks_dir.join("network-diagnostics.md")).unwrap();
-        assert!(content.contains("My custom version"), "Local-owned file was overwritten");
+        let content =
+            std::fs::read_to_string(playbooks_dir.join("network-diagnostics.md")).unwrap();
+        assert!(
+            content.contains("My custom version"),
+            "Local-owned file was overwritten"
+        );
     }
 
     #[test]
@@ -978,16 +1030,22 @@ mod tests {
         let fleet_version = "---\nname: network-diagnostics\ndescription: Fleet override\nplatform: macos\nsource: fleet\n---\n\n# Fleet version";
         std::fs::write(playbooks_dir.join("network-diagnostics.md"), fleet_version).unwrap();
 
-        let _registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"macos").unwrap();
+        let _registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
 
-        let content = std::fs::read_to_string(playbooks_dir.join("network-diagnostics.md")).unwrap();
-        assert!(content.contains("Fleet version"), "Fleet-owned file was overwritten by bundled");
+        let content =
+            std::fs::read_to_string(playbooks_dir.join("network-diagnostics.md")).unwrap();
+        assert!(
+            content.contains("Fleet version"),
+            "Fleet-owned file was overwritten by bundled"
+        );
     }
 
     #[test]
     fn test_reload_picks_up_new_playbooks() {
         let tmp = tempfile::tempdir().unwrap();
-        let mut registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
+        let mut registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
         let initial_count = registry.metas.len();
 
         // Add a new playbook to disk.
@@ -996,7 +1054,10 @@ mod tests {
 
         registry.reload();
         assert_eq!(registry.metas.len(), initial_count + 1);
-        assert!(registry.metas.iter().any(|m| m.name == "new-fleet-pb" && m.source == PlaybookSource::Fleet));
+        assert!(registry
+            .metas
+            .iter()
+            .any(|m| m.name == "new-fleet-pb" && m.source == PlaybookSource::Fleet));
     }
 
     #[test]
@@ -1009,7 +1070,8 @@ mod tests {
         let custom = "---\nname: custom-test\ndescription: A custom playbook\n---\n\n# Custom";
         std::fs::write(playbooks_dir.join("custom-test.md"), custom).unwrap();
 
-        let registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"macos").unwrap();
+        let registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
 
         assert!(registry.metas.iter().any(|m| m.name == "custom-test"));
     }
@@ -1017,7 +1079,8 @@ mod tests {
     #[test]
     fn test_only_matching_platform_files_written() {
         let tmp = tempfile::tempdir().unwrap();
-        let _registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"windows").unwrap();
+        let _registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "windows").unwrap();
 
         for (filename, content) in &bundled_flat() {
             let meta = parse_frontmatter(content).unwrap();
@@ -1036,11 +1099,18 @@ mod tests {
     #[test]
     fn test_platform_filtering_macos() {
         let tmp = tempfile::tempdir().unwrap();
-        let registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"macos").unwrap();
+        let registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
 
         // Should include macos-specific and cross-platform playbooks.
-        assert!(registry.metas.iter().any(|m| m.name == "network-diagnostics")); // macos
-        assert!(registry.metas.iter().any(|m| m.name == "outlook-troubleshooting")); // all
+        assert!(registry
+            .metas
+            .iter()
+            .any(|m| m.name == "network-diagnostics")); // macos
+        assert!(registry
+            .metas
+            .iter()
+            .any(|m| m.name == "outlook-troubleshooting")); // all
 
         // Should NOT include windows-only playbooks.
         assert!(!registry.metas.iter().any(|m| m.platform == "windows"));
@@ -1049,13 +1119,20 @@ mod tests {
     #[test]
     fn test_platform_filtering_windows() {
         let tmp = tempfile::tempdir().unwrap();
-        let registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"windows").unwrap();
+        let registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "windows").unwrap();
 
         // Should include cross-platform playbook.
-        assert!(registry.metas.iter().any(|m| m.name == "outlook-troubleshooting"));
+        assert!(registry
+            .metas
+            .iter()
+            .any(|m| m.name == "outlook-troubleshooting"));
 
         // Should include windows-specific playbook.
-        assert!(registry.metas.iter().any(|m| m.name == "windows-update-troubleshooting"));
+        assert!(registry
+            .metas
+            .iter()
+            .any(|m| m.name == "windows-update-troubleshooting"));
 
         // Should NOT include macos-only playbooks.
         assert!(!registry.metas.iter().any(|m| m.platform == "macos"));
@@ -1064,13 +1141,17 @@ mod tests {
     #[test]
     fn test_platform_filtering_linux() {
         let tmp = tempfile::tempdir().unwrap();
-        let registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"linux").unwrap();
+        let registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "linux").unwrap();
 
         // Should include linux-specific playbook.
         assert!(registry.metas.iter().any(|m| m.name == "setup-cuda"));
 
         // Should include cross-platform playbooks.
-        assert!(registry.metas.iter().any(|m| m.name == "outlook-troubleshooting"));
+        assert!(registry
+            .metas
+            .iter()
+            .any(|m| m.name == "outlook-troubleshooting"));
 
         // Should NOT include macos-only or windows-only playbooks.
         assert!(!registry.metas.iter().any(|m| m.platform == "macos"));
@@ -1086,11 +1167,13 @@ mod tests {
         let win_playbook = "---\nname: win-only\ndescription: Windows test\nplatform: windows\nsource: local\n---\n\n# Win";
         std::fs::write(playbooks_dir.join("win-only.md"), win_playbook).unwrap();
 
-        let registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"macos").unwrap();
+        let registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
         assert!(!registry.metas.iter().any(|m| m.name == "win-only"));
 
         // But the file is on disk (written by user), and a Windows init would pick it up.
-        let win_registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"windows").unwrap();
+        let win_registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "windows").unwrap();
         assert!(win_registry.metas.iter().any(|m| m.name == "win-only"));
     }
 
@@ -1099,7 +1182,8 @@ mod tests {
     #[test]
     fn test_read_playbook_found() {
         let tmp = tempfile::tempdir().unwrap();
-        let registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"macos").unwrap();
+        let registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
         let content = registry.read_playbook("network-diagnostics").unwrap();
         assert!(content.contains("Network Diagnostics"));
     }
@@ -1107,7 +1191,8 @@ mod tests {
     #[test]
     fn test_read_playbook_not_found() {
         let tmp = tempfile::tempdir().unwrap();
-        let registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"macos").unwrap();
+        let registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
         let err = registry.read_playbook("nonexistent").unwrap_err();
         assert!(err.to_string().contains("not found"));
         assert!(err.to_string().contains("list_knowledge"));
@@ -1123,7 +1208,8 @@ mod tests {
         let user_playbook = "# Corrupted App Repair\n\nSteps to repair a corrupted macOS app.";
         std::fs::write(playbooks_dir.join("corrupted-app-repair.md"), user_playbook).unwrap();
 
-        let registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"macos").unwrap();
+        let registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
         let content = registry.read_playbook("corrupted-app-repair").unwrap();
         assert!(content.contains("Corrupted App Repair"));
     }
@@ -1140,11 +1226,18 @@ mod tests {
         std::fs::write(playbooks_dir.join("wifi-fix.md"), bundled_pb).unwrap();
         std::fs::write(playbooks_dir.join("wifi-fix-local.md"), local_pb).unwrap();
 
-        let registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"all").unwrap();
+        let registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "all").unwrap();
         let content = registry.read_playbook("wifi-fix").unwrap();
 
-        assert!(content.contains("Bundled steps"), "Bundled content should win");
-        assert!(!content.contains("My local steps"), "Local content should be shadowed");
+        assert!(
+            content.contains("Bundled steps"),
+            "Bundled content should win"
+        );
+        assert!(
+            !content.contains("My local steps"),
+            "Local content should be shadowed"
+        );
     }
 
     #[test]
@@ -1159,11 +1252,18 @@ mod tests {
         std::fs::write(playbooks_dir.join("wifi-fix.md"), bundled_pb).unwrap();
         std::fs::write(playbooks_dir.join("wifi-fix-fleet.md"), fleet_pb).unwrap();
 
-        let registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"all").unwrap();
+        let registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "all").unwrap();
         let content = registry.read_playbook("wifi-fix").unwrap();
 
-        assert!(content.contains("Fleet version"), "Fleet content should win");
-        assert!(!content.contains("# Bundled"), "Bundled content should be shadowed");
+        assert!(
+            content.contains("Fleet version"),
+            "Fleet content should win"
+        );
+        assert!(
+            !content.contains("# Bundled"),
+            "Bundled content should be shadowed"
+        );
     }
 
     #[test]
@@ -1199,9 +1299,11 @@ mod tests {
 
             // All built-ins must be bundled source (via `source: bundled` or legacy `type: system`).
             assert_eq!(
-                meta.source, PlaybookSource::Bundled,
+                meta.source,
+                PlaybookSource::Bundled,
                 "Built-in playbook {} should have source: bundled (or type: system), got {:?}",
-                filename, meta.source
+                filename,
+                meta.source
             );
         }
     }
@@ -1213,10 +1315,14 @@ mod tests {
     #[tokio::test]
     async fn test_activate_playbook_tool_success() {
         let tmp = tempfile::tempdir().unwrap();
-        let registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"macos").unwrap();
+        let registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
         let tool = ActivatePlaybookTool::new(wrap_registry(registry));
 
-        let result = tool.execute(&json!({"name": "network-diagnostics"})).await.unwrap();
+        let result = tool
+            .execute(&json!({"name": "network-diagnostics"}))
+            .await
+            .unwrap();
         assert!(result.output.contains("Network Diagnostics"));
         assert!(result.changes.is_empty()); // read-only
     }
@@ -1224,17 +1330,22 @@ mod tests {
     #[tokio::test]
     async fn test_activate_playbook_tool_not_found() {
         let tmp = tempfile::tempdir().unwrap();
-        let registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"macos").unwrap();
+        let registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
         let tool = ActivatePlaybookTool::new(wrap_registry(registry));
 
-        let err = tool.execute(&json!({"name": "nonexistent"})).await.unwrap_err();
+        let err = tool
+            .execute(&json!({"name": "nonexistent"}))
+            .await
+            .unwrap_err();
         assert!(err.to_string().contains("not found"));
     }
 
     #[tokio::test]
     async fn test_activate_playbook_tool_missing_param() {
         let tmp = tempfile::tempdir().unwrap();
-        let registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"macos").unwrap();
+        let registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
         let tool = ActivatePlaybookTool::new(wrap_registry(registry));
 
         let err = tool.execute(&json!({})).await.unwrap_err();
@@ -1244,7 +1355,8 @@ mod tests {
     #[test]
     fn test_activate_playbook_tool_is_read_only() {
         let tmp = tempfile::tempdir().unwrap();
-        let registry = PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(),"macos").unwrap();
+        let registry =
+            PlaybookRegistry::init_for_platform(tmp.path(), &bundled_dir(), "macos").unwrap();
         let tool = ActivatePlaybookTool::new(wrap_registry(registry));
 
         assert_eq!(tool.safety_tier(), SafetyTier::ReadOnly);
@@ -1272,10 +1384,8 @@ mod tests {
     fn test_builtin_playbooks_have_unique_names() {
         let mut names: Vec<&str> = Vec::new();
         for (filename, content) in &bundled_flat() {
-            let meta = parse_frontmatter(content).expect(&format!(
-                "{} has invalid frontmatter",
-                filename
-            ));
+            let meta =
+                parse_frontmatter(content).expect(&format!("{} has invalid frontmatter", filename));
             assert!(
                 !names.contains(&meta.name.as_str()),
                 "Duplicate playbook name: {}",
@@ -1307,9 +1417,13 @@ mod tests {
 
         for (filename, content) in &bundled_flat() {
             let meta = parse_frontmatter(content).unwrap();
-            if meta.platform != "macos" { continue; }
+            if meta.platform != "macos" {
+                continue;
+            }
             // Procedural playbooks use ui_* tools and reference tools in doc sections.
-            if is_procedural(content) { continue; }
+            if is_procedural(content) {
+                continue;
+            }
 
             // Find backtick-quoted tool references in the playbook body.
             for cap in content.split('`') {
@@ -1345,8 +1459,7 @@ mod tests {
 
             for cap in content.split('`') {
                 let word = cap.trim();
-                if word.starts_with("mac_")
-                    && word.chars().all(|c| c.is_alphanumeric() || c == '_')
+                if word.starts_with("mac_") && word.chars().all(|c| c.is_alphanumeric() || c == '_')
                 {
                     panic!(
                         "Windows playbook {} references macOS tool `{}`",
@@ -1387,9 +1500,13 @@ mod tests {
     fn test_cross_platform_playbooks_avoid_platform_tool_names() {
         for (filename, content) in &bundled_flat() {
             let meta = parse_frontmatter(content).unwrap();
-            if meta.platform != "all" { continue; }
+            if meta.platform != "all" {
+                continue;
+            }
             // Procedural playbooks may mention platform tools in "Tools referenced" docs.
-            if is_procedural(content) { continue; }
+            if is_procedural(content) {
+                continue;
+            }
 
             // Check backtick-quoted words for platform-prefixed tool names.
             let mut in_backtick = false;
@@ -1420,7 +1537,9 @@ mod tests {
     #[test]
     fn test_builtin_playbooks_have_escalation_section() {
         for (filename, content) in &bundled_flat() {
-            if is_procedural(content) { continue; }
+            if is_procedural(content) {
+                continue;
+            }
             assert!(
                 content.contains("## Escalation"),
                 "Playbook {} is missing '## Escalation' section. Every playbook needs a bail-out path.",
@@ -1433,7 +1552,9 @@ mod tests {
     #[test]
     fn test_builtin_playbooks_have_caveats_section() {
         for (filename, content) in &bundled_flat() {
-            if is_procedural(content) { continue; }
+            if is_procedural(content) {
+                continue;
+            }
             assert!(
                 content.contains("## Caveats"),
                 "Playbook {} is missing '## Caveats' section. Document when the standard path doesn't apply.",
@@ -1446,7 +1567,9 @@ mod tests {
     #[test]
     fn test_builtin_playbooks_have_key_signals_section() {
         for (filename, content) in &bundled_flat() {
-            if is_procedural(content) { continue; }
+            if is_procedural(content) {
+                continue;
+            }
             assert!(
                 content.contains("## Key signals"),
                 "Playbook {} is missing '## Key signals' section.",
@@ -1459,7 +1582,9 @@ mod tests {
     #[test]
     fn test_builtin_playbooks_claim_success_rate() {
         for (filename, content) in &bundled_flat() {
-            if is_procedural(content) { continue; }
+            if is_procedural(content) {
+                continue;
+            }
             assert!(
                 content.contains('%'),
                 "Playbook {} never mentions a success rate (e.g. '~80%'). \
@@ -1555,7 +1680,10 @@ User reports...
 ### 2. Check gateway
 "#;
         let steps = parse_steps(content);
-        assert!(steps.is_empty(), "Diagnostic playbooks should have no steps (### not ##)");
+        assert!(
+            steps.is_empty(),
+            "Diagnostic playbooks should have no steps (### not ##)"
+        );
     }
 
     #[test]

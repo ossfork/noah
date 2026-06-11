@@ -23,7 +23,11 @@ fn run_cmd(program: &str, args: &[&str], fallback: &str) -> String {
     match cmd.output() {
         Ok(output) if output.status.success() => {
             let s = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if s.is_empty() { fallback.to_string() } else { s }
+            if s.is_empty() {
+                fallback.to_string()
+            } else {
+                s
+            }
         }
         Ok(output) => {
             let combined = format!(
@@ -32,7 +36,11 @@ fn run_cmd(program: &str, args: &[&str], fallback: &str) -> String {
                 String::from_utf8_lossy(&output.stderr)
             );
             let trimmed = combined.trim().to_string();
-            if trimmed.is_empty() { fallback.to_string() } else { trimmed }
+            if trimmed.is_empty() {
+                fallback.to_string()
+            } else {
+                trimmed
+            }
         }
         _ => fallback.to_string(),
     }
@@ -54,15 +62,18 @@ struct RawCheck {
 
 /// Convert raw checks into the scan_results tuple format used by journal.
 #[allow(clippy::type_complexity)]
-fn checks_to_results(checks: &[RawCheck], generation: i64) -> Vec<(
-    String,           // path (we use check id)
-    Option<String>,   // category
-    Option<String>,   // key (label)
-    Option<f64>,      // value_num (100=pass, 50=warn, 0=fail)
-    Option<String>,   // value_text (status string)
-    Option<String>,   // metadata (detail)
-    bool,             // stale
-    i64,              // generation
+fn checks_to_results(
+    checks: &[RawCheck],
+    generation: i64,
+) -> Vec<(
+    String,         // path (we use check id)
+    Option<String>, // category
+    Option<String>, // key (label)
+    Option<f64>,    // value_num (100=pass, 50=warn, 0=fail)
+    Option<String>, // value_text (status string)
+    Option<String>, // metadata (detail)
+    bool,           // stale
+    i64,            // generation
 )> {
     checks
         .iter()
@@ -93,11 +104,7 @@ fn count_plist_files(dir: &std::path::Path) -> usize {
     std::fs::read_dir(dir)
         .map(|rd| {
             rd.filter_map(|e| e.ok())
-                .filter(|e| {
-                    e.path()
-                        .extension()
-                        .is_some_and(|ext| ext == "plist")
-                })
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "plist"))
                 .count()
         })
         .unwrap_or(0)
@@ -211,7 +218,8 @@ fn run_windows_checks() -> Vec<RawCheck> {
     let mut checks = Vec::new();
 
     // Uptime
-    let days_str = ps("((Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime).TotalDays");
+    let days_str =
+        ps("((Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime).TotalDays");
     if let Ok(total_days) = days_str.trim().parse::<f64>() {
         let days = total_days as i64;
         let status = if days < 14 {
@@ -268,7 +276,8 @@ fn run_windows_checks() -> Vec<RawCheck> {
     }
 
     // Memory
-    let mem_str = ps("[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)");
+    let mem_str =
+        ps("[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)");
     if let Ok(gb) = mem_str.trim().parse::<u64>() {
         let status = if gb >= 8 {
             "pass"
@@ -359,7 +368,10 @@ fn run_linux_checks() -> Vec<RawCheck> {
             id: "performance.startup_items",
             label: "Startup Services",
             status,
-            detail: format!("{} enabled services ({} system, {} user)", total, sys_count, user_count),
+            detail: format!(
+                "{} enabled services ({} system, {} user)",
+                total, sys_count, user_count
+            ),
         });
     }
 

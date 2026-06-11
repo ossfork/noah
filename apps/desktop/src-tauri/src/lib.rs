@@ -1,17 +1,17 @@
 pub mod agent;
+mod autoheal;
 mod commands;
 mod dashboard_link;
 pub mod debug_runner;
+pub(crate) mod fleet_policy;
 mod knowledge;
 mod machine_context;
-mod system_snapshot;
 mod platform;
 mod playbooks;
-pub(crate) mod fleet_policy;
-mod autoheal;
 mod proactive;
 mod safety;
 mod scanner;
+mod system_snapshot;
 pub mod ui_tools;
 mod web_fetch;
 
@@ -19,8 +19,8 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, RwLock};
+use tauri::menu::{MenuBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::Manager;
-use tauri::menu::{MenuBuilder, SubmenuBuilder, PredefinedMenuItem};
 use tokio::sync::{oneshot, Mutex};
 
 use agent::llm_client::{AuthMode, LlmClient};
@@ -101,7 +101,9 @@ pub fn clear_auth_files(app_dir: &std::path::Path) {
 /// removes the old directory.
 fn migrate_old_data_dir(new_dir: &std::path::Path) {
     // Build the old path by replacing the last component.
-    let Some(parent) = new_dir.parent() else { return };
+    let Some(parent) = new_dir.parent() else {
+        return;
+    };
     let old_dir = parent.join("com.itman.app");
 
     if !old_dir.is_dir() {
@@ -118,10 +120,7 @@ fn migrate_old_data_dir(new_dir: &std::path::Path) {
         return;
     }
 
-    eprintln!(
-        "[migrate] Moving data from {:?} to {:?}",
-        old_dir, new_dir
-    );
+    eprintln!("[migrate] Moving data from {:?} to {:?}", old_dir, new_dir);
 
     // Copy everything from old → new recursively.
     if let Err(e) = copy_dir_recursive(&old_dir, new_dir) {
@@ -157,7 +156,8 @@ fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::
 pub fn run() {
     // Disable GPU acceleration for WebKit2GTK on Linux to fix GBM/EGL errors
     // This is needed on Fedora 43 and other Linux systems with certain GPU drivers
-    #[cfg(target_os = "linux")] {
+    #[cfg(target_os = "linux")]
+    {
         std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
         std::env::set_var("WEBKIT_DISABLE_GPU_COMPOSITING", "1");
     }
@@ -719,9 +719,18 @@ mod tests {
         migrate_old_data_dir(&new_dir);
 
         // Files should be in the new dir.
-        assert_eq!(fs::read_to_string(new_dir.join("journal.db")).unwrap(), "fake-db-content");
-        assert_eq!(fs::read_to_string(new_dir.join("api_key.txt")).unwrap(), "sk-ant-test");
-        assert_eq!(fs::read_to_string(new_dir.join("knowledge/note.md")).unwrap(), "# My note");
+        assert_eq!(
+            fs::read_to_string(new_dir.join("journal.db")).unwrap(),
+            "fake-db-content"
+        );
+        assert_eq!(
+            fs::read_to_string(new_dir.join("api_key.txt")).unwrap(),
+            "sk-ant-test"
+        );
+        assert_eq!(
+            fs::read_to_string(new_dir.join("knowledge/note.md")).unwrap(),
+            "# My note"
+        );
 
         // Old dir should be gone.
         assert!(!old_dir.exists());
@@ -745,7 +754,10 @@ mod tests {
         migrate_old_data_dir(&new_dir);
 
         // New data should be untouched.
-        assert_eq!(fs::read_to_string(new_dir.join("journal.db")).unwrap(), "new-data");
+        assert_eq!(
+            fs::read_to_string(new_dir.join("journal.db")).unwrap(),
+            "new-data"
+        );
         // Old dir should still exist (not removed since migration was skipped).
         assert!(old_dir.exists());
     }
@@ -778,8 +790,14 @@ mod tests {
         migrate_old_data_dir(&new_dir);
 
         // Existing file should not be overwritten.
-        assert_eq!(fs::read_to_string(new_dir.join("api_key.txt")).unwrap(), "new-key");
+        assert_eq!(
+            fs::read_to_string(new_dir.join("api_key.txt")).unwrap(),
+            "new-key"
+        );
         // But new files should be copied.
-        assert_eq!(fs::read_to_string(new_dir.join("journal.db")).unwrap(), "old-db");
+        assert_eq!(
+            fs::read_to_string(new_dir.join("journal.db")).unwrap(),
+            "old-db"
+        );
     }
 }

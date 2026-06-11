@@ -19,16 +19,21 @@ fn normalize_action_from_input(input: &Value) -> Result<(String, String)> {
     }
     // Also accept top-level "label" (models sometimes hoist it)
     if let Some(label) = input.get("label").and_then(|v| v.as_str()) {
-        let action_type = input.get("action_type")
+        let action_type = input
+            .get("action_type")
             .and_then(|v| v.as_str())
             .unwrap_or("RUN_STEP");
         return Ok((label.to_string(), action_type.to_string()));
     }
     // Legacy nested action object
     if let Some(action) = input.get("action").and_then(|v| v.as_object()) {
-        let label = action.get("label").and_then(|v| v.as_str())
+        let label = action
+            .get("label")
+            .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow!("missing action.label"))?;
-        let action_type = action.get("type").and_then(|v| v.as_str())
+        let action_type = action
+            .get("type")
+            .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow!("missing action.type"))?;
         return Ok((label.to_string(), action_type.to_string()));
     }
@@ -42,12 +47,12 @@ pub fn ui_payload_from_tool_call(name: &str, input: &Value) -> Result<String> {
                 .get("situation_md")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| anyhow!("missing situation_md"))?;
-            let plan = input
-                .get("plan_md")
-                .and_then(|v| v.as_str());
+            let plan = input.get("plan_md").and_then(|v| v.as_str());
             let (label, action_type) = normalize_action_from_input(input)?;
             if !action_type_valid(&action_type) {
-                return Err(anyhow!("invalid action.type: must be RUN_STEP or WAIT_FOR_USER"));
+                return Err(anyhow!(
+                    "invalid action.type: must be RUN_STEP or WAIT_FOR_USER"
+                ));
             }
             let mut payload = json!({
                 "kind": "spa",
@@ -104,10 +109,14 @@ pub fn ui_payload_from_tool_call(name: &str, input: &Value) -> Result<String> {
                     .filter(|&&v| v)
                     .count();
                 if mode_count == 0 {
-                    return Err(anyhow!("question must have 'options', 'text_input', or 'secure_input'"));
+                    return Err(anyhow!(
+                        "question must have 'options', 'text_input', or 'secure_input'"
+                    ));
                 }
                 if mode_count > 1 {
-                    return Err(anyhow!("question must have only one of 'options', 'text_input', or 'secure_input'"));
+                    return Err(anyhow!(
+                        "question must have only one of 'options', 'text_input', or 'secure_input'"
+                    ));
                 }
 
                 if has_options {
@@ -204,7 +213,9 @@ struct UiDoneTool;
 
 #[async_trait]
 impl Tool for UiSpaTool {
-    fn name(&self) -> &str { "ui_spa" }
+    fn name(&self) -> &str {
+        "ui_spa"
+    }
     fn description(&self) -> &str {
         "Emit a Situation/Plan/Action (SPA) panel for the UI. `situation_md` is ONE sentence; structured diagnostic facts go in `findings`; ordered remediation actions go in `steps`."
     }
@@ -255,16 +266,23 @@ impl Tool for UiSpaTool {
           "additionalProperties":true
         })
     }
-    fn safety_tier(&self) -> SafetyTier { SafetyTier::ReadOnly }
+    fn safety_tier(&self) -> SafetyTier {
+        SafetyTier::ReadOnly
+    }
     async fn execute(&self, input: &Value) -> Result<ToolResult> {
         let payload = ui_payload_from_tool_call(self.name(), input)?;
-        Ok(ToolResult::read_only(payload.clone(), serde_json::from_str(&payload)?))
+        Ok(ToolResult::read_only(
+            payload.clone(),
+            serde_json::from_str(&payload)?,
+        ))
     }
 }
 
 #[async_trait]
 impl Tool for UiUserQuestionTool {
-    fn name(&self) -> &str { "ui_user_question" }
+    fn name(&self) -> &str {
+        "ui_user_question"
+    }
     fn description(&self) -> &str {
         "Ask the user a question with selectable options, a free-text input, or a secure input for credentials."
     }
@@ -324,17 +342,26 @@ impl Tool for UiUserQuestionTool {
           "additionalProperties":false
         })
     }
-    fn safety_tier(&self) -> SafetyTier { SafetyTier::ReadOnly }
+    fn safety_tier(&self) -> SafetyTier {
+        SafetyTier::ReadOnly
+    }
     async fn execute(&self, input: &Value) -> Result<ToolResult> {
         let payload = ui_payload_from_tool_call(self.name(), input)?;
-        Ok(ToolResult::read_only(payload.clone(), serde_json::from_str(&payload)?))
+        Ok(ToolResult::read_only(
+            payload.clone(),
+            serde_json::from_str(&payload)?,
+        ))
     }
 }
 
 #[async_trait]
 impl Tool for UiInfoTool {
-    fn name(&self) -> &str { "ui_info" }
-    fn description(&self) -> &str { "Emit an informational card in Markdown." }
+    fn name(&self) -> &str {
+        "ui_info"
+    }
+    fn description(&self) -> &str {
+        "Emit an informational card in Markdown."
+    }
     fn input_schema(&self) -> Value {
         json!({
           "type":"object",
@@ -343,17 +370,26 @@ impl Tool for UiInfoTool {
           "additionalProperties":false
         })
     }
-    fn safety_tier(&self) -> SafetyTier { SafetyTier::ReadOnly }
+    fn safety_tier(&self) -> SafetyTier {
+        SafetyTier::ReadOnly
+    }
     async fn execute(&self, input: &Value) -> Result<ToolResult> {
         let payload = ui_payload_from_tool_call(self.name(), input)?;
-        Ok(ToolResult::read_only(payload.clone(), serde_json::from_str(&payload)?))
+        Ok(ToolResult::read_only(
+            payload.clone(),
+            serde_json::from_str(&payload)?,
+        ))
     }
 }
 
 #[async_trait]
 impl Tool for UiDoneTool {
-    fn name(&self) -> &str { "ui_done" }
-    fn description(&self) -> &str { "Emit a completion card. `summary_md` is one short paragraph; structured facts (what was measured / what changed) go in `findings`." }
+    fn name(&self) -> &str {
+        "ui_done"
+    }
+    fn description(&self) -> &str {
+        "Emit a completion card. `summary_md` is one short paragraph; structured facts (what was measured / what changed) go in `findings`."
+    }
     fn input_schema(&self) -> Value {
         json!({
           "type":"object",
@@ -382,10 +418,15 @@ impl Tool for UiDoneTool {
           "additionalProperties":true
         })
     }
-    fn safety_tier(&self) -> SafetyTier { SafetyTier::ReadOnly }
+    fn safety_tier(&self) -> SafetyTier {
+        SafetyTier::ReadOnly
+    }
     async fn execute(&self, input: &Value) -> Result<ToolResult> {
         let payload = ui_payload_from_tool_call(self.name(), input)?;
-        Ok(ToolResult::read_only(payload.clone(), serde_json::from_str(&payload)?))
+        Ok(ToolResult::read_only(
+            payload.clone(),
+            serde_json::from_str(&payload)?,
+        ))
     }
 }
 
@@ -395,7 +436,9 @@ struct WriteSecretTool;
 
 #[async_trait]
 impl Tool for WriteSecretTool {
-    fn name(&self) -> &str { "write_secret" }
+    fn name(&self) -> &str {
+        "write_secret"
+    }
     fn description(&self) -> &str {
         "Write a previously collected secure_input value to a file. The secret value is substituted by the runtime — you never see it."
     }
@@ -420,7 +463,9 @@ impl Tool for WriteSecretTool {
             "additionalProperties": false
         })
     }
-    fn safety_tier(&self) -> SafetyTier { SafetyTier::SafeAction }
+    fn safety_tier(&self) -> SafetyTier {
+        SafetyTier::SafeAction
+    }
     async fn execute(&self, input: &Value) -> Result<ToolResult> {
         // The orchestrator substitutes __secret_value__ before calling execute.
         // If it's still the placeholder, the secret wasn't found.
@@ -492,7 +537,10 @@ mod tests {
         let v: Value = serde_json::from_str(&result).unwrap();
         assert_eq!(v["kind"], "spa");
         assert_eq!(v["action"]["type"], "WAIT_FOR_USER");
-        assert!(v.get("plan").is_none(), "plan should be absent when plan_md omitted");
+        assert!(
+            v.get("plan").is_none(),
+            "plan should be absent when plan_md omitted"
+        );
     }
 
     #[test]
@@ -503,9 +551,9 @@ mod tests {
             "plan_md": "Here's the fix",
             "action": {"label": "Fix", "type": "RUN_STEP"}
         });
-        let v: Value = serde_json::from_str(
-            &ui_payload_from_tool_call("ui_spa", &with_plan).unwrap(),
-        ).unwrap();
+        let v: Value =
+            serde_json::from_str(&ui_payload_from_tool_call("ui_spa", &with_plan).unwrap())
+                .unwrap();
         assert_eq!(v["plan"], "Here's the fix");
 
         // Without plan_md
@@ -513,9 +561,9 @@ mod tests {
             "situation_md": "Do this task",
             "action": {"label": "Done", "type": "WAIT_FOR_USER"}
         });
-        let v: Value = serde_json::from_str(
-            &ui_payload_from_tool_call("ui_spa", &without_plan).unwrap(),
-        ).unwrap();
+        let v: Value =
+            serde_json::from_str(&ui_payload_from_tool_call("ui_spa", &without_plan).unwrap())
+                .unwrap();
         assert!(v.get("plan").is_none());
     }
 

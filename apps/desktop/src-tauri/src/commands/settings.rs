@@ -56,8 +56,12 @@ pub async fn set_telemetry_consent(
     enabled: bool,
 ) -> Result<(), String> {
     let conn = state.db.lock().await;
-    journal::set_setting(&conn, "telemetry_consent", if enabled { "true" } else { "false" })
-        .map_err(|e| format!("Failed to save setting: {}", e))
+    journal::set_setting(
+        &conn,
+        "telemetry_consent",
+        if enabled { "true" } else { "false" },
+    )
+    .map_err(|e| format!("Failed to save setting: {}", e))
 }
 
 #[tauri::command]
@@ -68,8 +72,7 @@ pub async fn track_event(
 ) -> Result<(), String> {
     // Only record if telemetry is opted-in
     let conn = state.db.lock().await;
-    let consent = journal::get_setting(&conn, "telemetry_consent")
-        .map_err(|e| format!("{}", e))?;
+    let consent = journal::get_setting(&conn, "telemetry_consent").map_err(|e| format!("{}", e))?;
     if consent.as_deref() != Some("true") {
         return Ok(());
     }
@@ -92,8 +95,12 @@ pub async fn set_proactive_enabled(
     enabled: bool,
 ) -> Result<(), String> {
     let conn = state.db.lock().await;
-    journal::set_setting(&conn, "proactive_enabled", if enabled { "true" } else { "false" })
-        .map_err(|e| format!("Failed to save setting: {}", e))
+    journal::set_setting(
+        &conn,
+        "proactive_enabled",
+        if enabled { "true" } else { "false" },
+    )
+    .map_err(|e| format!("Failed to save setting: {}", e))
 }
 
 #[tauri::command]
@@ -111,8 +118,12 @@ pub async fn set_auto_heal_enabled(
     enabled: bool,
 ) -> Result<(), String> {
     let conn = state.db.lock().await;
-    journal::set_setting(&conn, "auto_heal_enabled", if enabled { "true" } else { "false" })
-        .map_err(|e| format!("Failed to save setting: {}", e))
+    journal::set_setting(
+        &conn,
+        "auto_heal_enabled",
+        if enabled { "true" } else { "false" },
+    )
+    .map_err(|e| format!("Failed to save setting: {}", e))
 }
 
 #[tauri::command]
@@ -136,14 +147,22 @@ pub async fn act_on_proactive_suggestion(
 }
 
 #[tauri::command]
-pub async fn set_locale(state: State<'_, AppState>, session_id: String, locale: String) -> Result<(), String> {
+pub async fn set_locale(
+    state: State<'_, AppState>,
+    session_id: String,
+    locale: String,
+) -> Result<(), String> {
     let mut orch = state.orchestrator.lock().await;
     orch.set_locale(&session_id, &locale);
     Ok(())
 }
 
 #[tauri::command]
-pub async fn set_session_mode(state: State<'_, AppState>, session_id: String, mode: String) -> Result<(), String> {
+pub async fn set_session_mode(
+    state: State<'_, AppState>,
+    session_id: String,
+    mode: String,
+) -> Result<(), String> {
     match mode.as_str() {
         "default" | "learn" => {}
         _ => return Err(format!("Invalid session mode: {}", mode)),
@@ -170,8 +189,8 @@ pub struct TraceSummary {
 #[tauri::command]
 pub async fn get_feedback_context(state: State<'_, AppState>) -> Result<FeedbackContext, String> {
     let conn = state.db.lock().await;
-    let traces = journal::get_recent_traces(&conn, 5)
-        .map_err(|e| format!("Failed to get traces: {}", e))?;
+    let traces =
+        journal::get_recent_traces(&conn, 5).map_err(|e| format!("Failed to get traces: {}", e))?;
 
     let trace_summaries: Vec<TraceSummary> = traces
         .into_iter()
@@ -211,8 +230,12 @@ pub async fn set_byok_telemetry_enabled(
     enabled: bool,
 ) -> Result<(), String> {
     let conn = state.db.lock().await;
-    journal::set_setting(&conn, "byok_telemetry_enabled", if enabled { "true" } else { "false" })
-        .map_err(|e| format!("Failed to save setting: {}", e))
+    journal::set_setting(
+        &conn,
+        "byok_telemetry_enabled",
+        if enabled { "true" } else { "false" },
+    )
+    .map_err(|e| format!("Failed to save setting: {}", e))
 }
 
 /// Fire-and-forget anonymous "issue fixed" event. Skipped when the
@@ -222,8 +245,8 @@ pub async fn set_byok_telemetry_enabled(
 pub async fn notify_issue_fixed(state: State<'_, AppState>) -> Result<(), String> {
     {
         let conn = state.db.lock().await;
-        let value = journal::get_setting(&conn, "byok_telemetry_enabled")
-            .map_err(|e| format!("{}", e))?;
+        let value =
+            journal::get_setting(&conn, "byok_telemetry_enabled").map_err(|e| format!("{}", e))?;
         if value.as_deref() == Some("false") {
             return Ok(());
         }
@@ -246,12 +269,13 @@ pub async fn link_dashboard(
 ) -> Result<String, String> {
     use crate::dashboard_link::{self, DashboardConfig};
 
-    let (base_url, token) = dashboard_link::parse_enrollment_url(&enrollment_url)
-        .map_err(|e| e.to_string())?;
+    let (base_url, token) =
+        dashboard_link::parse_enrollment_url(&enrollment_url).map_err(|e| e.to_string())?;
 
-    let (device_id, device_token, fleet_name, enabled_categories) = dashboard_link::enroll_device(&base_url, &token)
-        .await
-        .map_err(|e| e.to_string())?;
+    let (device_id, device_token, fleet_name, enabled_categories) =
+        dashboard_link::enroll_device(&base_url, &token)
+            .await
+            .map_err(|e| e.to_string())?;
 
     let config = DashboardConfig {
         dashboard_url: base_url,

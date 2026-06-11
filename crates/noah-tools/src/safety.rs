@@ -605,8 +605,9 @@ fn mentions_deletion(cmd: &str) -> bool {
             "eval" => return true,
             // pipe-to-shell laundering (`… | sh`)
             "sh" | "bash" | "zsh" if has_pipe(cmd) => return true,
-            leader if is_shell_leader(leader)
-                && shell_script_arg(&args).is_some_and(mentions_deletion) =>
+            leader
+                if is_shell_leader(leader)
+                    && shell_script_arg(&args).is_some_and(mentions_deletion) =>
             {
                 return true;
             }
@@ -734,8 +735,9 @@ fn canonical_violation(cmd: &str) -> Option<String> {
             "srm" | "shred" | "rmdir" | "xargs" | "eval" => {
                 return Some(tip_noncanonical(&format!("`{}`", leader)));
             }
-            leader if is_shell_leader(leader)
-                && shell_script_arg(&args).is_some_and(mentions_deletion) =>
+            leader
+                if is_shell_leader(leader)
+                    && shell_script_arg(&args).is_some_and(mentions_deletion) =>
             {
                 return Some(tip_noncanonical(&format!(
                     "a nested `{}` shell script",

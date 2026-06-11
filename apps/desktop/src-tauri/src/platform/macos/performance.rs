@@ -131,7 +131,16 @@ impl Tool for MacProcessList {
 
         // Also get top output for a sorted view
         let top_output = Command::new("top")
-            .args(["-l", "1", "-n", "20", "-o", if sort_by == "mem" { "mem" } else { "cpu" }, "-s", "0"])
+            .args([
+                "-l",
+                "1",
+                "-n",
+                "20",
+                "-o",
+                if sort_by == "mem" { "mem" } else { "cpu" },
+                "-s",
+                "0",
+            ])
             .output()
             .map(|o| {
                 let stdout = String::from_utf8_lossy(&o.stdout).to_string();
@@ -254,7 +263,9 @@ impl Tool for MacKillProcess {
                 if o.status.success() {
                     format!(
                         "Process {} killed with signal {}.\n\nProcess info:\n{}",
-                        pid, signal, ps_info.trim()
+                        pid,
+                        signal,
+                        ps_info.trim()
                     )
                 } else {
                     let stderr = String::from_utf8_lossy(&o.stderr).to_string();
@@ -314,17 +325,28 @@ impl Tool for MacClearCaches {
 
         // Remove contents of Caches directory (not the directory itself)
         let output = Command::new("find")
-            .args([&caches_dir, "-mindepth", "1", "-maxdepth", "1", "-exec", "rm", "-rf", "{}", ";"])
+            .args([
+                &caches_dir,
+                "-mindepth",
+                "1",
+                "-maxdepth",
+                "1",
+                "-exec",
+                "rm",
+                "-rf",
+                "{}",
+                ";",
+            ])
             .output()
             .map(|o| {
                 if o.status.success() {
-                    format!(
-                        "Caches cleared successfully.\nBefore: {}",
-                        before_size
-                    )
+                    format!("Caches cleared successfully.\nBefore: {}", before_size)
                 } else {
                     let stderr = String::from_utf8_lossy(&o.stderr).to_string();
-                    format!("Some caches cleared (some may be in use): {}", stderr.trim())
+                    format!(
+                        "Some caches cleared (some may be in use): {}",
+                        stderr.trim()
+                    )
                 }
             })
             .unwrap_or_else(|e| format!("Failed to clear caches: {}", e));
@@ -359,9 +381,20 @@ impl Tool for MacClearCaches {
 /// be killed. Mirrors the performance-forensics playbook caveats.
 fn is_system_process(name: &str) -> bool {
     const PROTECTED: &[&str] = &[
-        "kernel_task", "WindowServer", "mds", "mds_stores", "mdworker",
-        "trustd", "backupd", "cloudd", "bird", "softwareupdated",
-        "launchd", "logd", "coreaudiod", "spotlightknowledged",
+        "kernel_task",
+        "WindowServer",
+        "mds",
+        "mds_stores",
+        "mdworker",
+        "trustd",
+        "backupd",
+        "cloudd",
+        "bird",
+        "softwareupdated",
+        "launchd",
+        "logd",
+        "coreaudiod",
+        "spotlightknowledged",
     ];
     PROTECTED.iter().any(|p| name == *p || name.starts_with(p))
 }
@@ -405,7 +438,9 @@ fn parse_proc_samples(ps_stdout: &str) -> Vec<ProcSample> {
         if full.is_empty() {
             continue;
         }
-        let Ok(pid) = pid.parse::<i64>() else { continue };
+        let Ok(pid) = pid.parse::<i64>() else {
+            continue;
+        };
         let rss_kb = rss.parse::<f64>().unwrap_or(0.0);
         let cpu_pct = cpu.parse::<f64>().unwrap_or(0.0);
         // `ps comm=` gives the full path; display the basename and decide
@@ -533,9 +568,17 @@ impl Tool for MacPerformanceDiagnose {
         // Processes (single ps call covers both CPU and memory ranking).
         let procs = parse_proc_samples(&run("ps", &["-axo", "pid=,rss=,pcpu=,comm="]));
         let mut by_mem = procs.clone();
-        by_mem.sort_by(|a, b| b.mem_mb.partial_cmp(&a.mem_mb).unwrap_or(std::cmp::Ordering::Equal));
+        by_mem.sort_by(|a, b| {
+            b.mem_mb
+                .partial_cmp(&a.mem_mb)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         let mut by_cpu = procs.clone();
-        by_cpu.sort_by(|a, b| b.cpu_pct.partial_cmp(&a.cpu_pct).unwrap_or(std::cmp::Ordering::Equal));
+        by_cpu.sort_by(|a, b| {
+            b.cpu_pct
+                .partial_cmp(&a.cpu_pct)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         let proc_json = |p: &ProcSample| {
             json!({
@@ -579,18 +622,26 @@ impl Tool for MacPerformanceDiagnose {
         let headline = match primary {
             "cpu" => {
                 let p = top_cpu_proc.unwrap();
-                format!("Runaway process: {} is using {:.0}% CPU.", p.name, p.cpu_pct)
+                format!(
+                    "Runaway process: {} is using {:.0}% CPU.",
+                    p.name, p.cpu_pct
+                )
             }
             "memory" => format!(
                 "Memory pressure: {:.1} GB swap in use on a {:.0} GB Mac.",
                 swap_used_gb, ram_total_gb
             ),
             "disk" => format!("Disk nearly full: boot volume is {}% used.", disk_used_pct),
-            "thermal" => "Thermal throttling: kernel_task is holding CPU to cool the Mac.".to_string(),
+            "thermal" => {
+                "Thermal throttling: kernel_task is holding CPU to cool the Mac.".to_string()
+            }
             _ => "No single bottleneck found — the Mac looks healthy.".to_string(),
         };
         let restart_hint = if uptime_days > 7 {
-            format!(" Uptime is {} days — a restart is worth suggesting.", uptime_days)
+            format!(
+                " Uptime is {} days — a restart is worth suggesting.",
+                uptime_days
+            )
         } else {
             String::new()
         };
@@ -661,7 +712,9 @@ mod diagnose_tests {
         assert!(is_system_path("/System/Library/.../WindowServer"));
         assert!(is_system_path("/usr/sbin/mDNSResponder"));
         assert!(is_system_path("kernel_task")); // bare name in list
-        assert!(!is_system_path("/Applications/Firefox.app/Contents/MacOS/firefox"));
+        assert!(!is_system_path(
+            "/Applications/Firefox.app/Contents/MacOS/firefox"
+        ));
         assert_eq!(proc_basename("/a/b/c/Foo"), "Foo");
         assert_eq!(proc_basename("Foo"), "Foo");
     }
@@ -674,8 +727,13 @@ mod diagnose_tests {
 
     #[test]
     fn parses_swap_used_gigabytes_and_zero() {
-        assert!((parse_swap_used_gb("total = 4.00G  used = 2.50G  free = 1.50G") - 2.5).abs() < 0.01);
-        assert_eq!(parse_swap_used_gb("total = 0.00M  used = 0.00M  free = 0.00M"), 0.0);
+        assert!(
+            (parse_swap_used_gb("total = 4.00G  used = 2.50G  free = 1.50G") - 2.5).abs() < 0.01
+        );
+        assert_eq!(
+            parse_swap_used_gb("total = 0.00M  used = 0.00M  free = 0.00M"),
+            0.0
+        );
     }
 
     #[test]

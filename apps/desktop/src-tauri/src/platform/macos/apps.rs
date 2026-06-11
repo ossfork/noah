@@ -129,11 +129,18 @@ impl Tool for MacAppLogs {
             .map(|o| {
                 let stdout = String::from_utf8_lossy(&o.stdout).to_string();
                 if stdout.trim().is_empty() {
-                    format!("No log entries found for '{}' in the last {}.", app_name, duration)
+                    format!(
+                        "No log entries found for '{}' in the last {}.",
+                        app_name, duration
+                    )
                 } else {
                     // Limit output to last 100 lines
                     let lines: Vec<&str> = stdout.lines().collect();
-                    let start = if lines.len() > 100 { lines.len() - 100 } else { 0 };
+                    let start = if lines.len() > 100 {
+                        lines.len() - 100
+                    } else {
+                        0
+                    };
                     let truncated = lines[start..].join("\n");
                     if start > 0 {
                         format!(
@@ -205,7 +212,11 @@ impl Tool for MacAppSupportLs {
                 let stdout = String::from_utf8_lossy(&o.stdout).to_string();
                 let stderr = String::from_utf8_lossy(&o.stderr).to_string();
                 if stdout.trim().is_empty() && !stderr.trim().is_empty() {
-                    format!("Directory not found or empty: {}\n{}", support_dir, stderr.trim())
+                    format!(
+                        "Directory not found or empty: {}\n{}",
+                        support_dir,
+                        stderr.trim()
+                    )
                 } else {
                     format!("Contents of {}:\n{}", support_dir, stdout)
                 }
