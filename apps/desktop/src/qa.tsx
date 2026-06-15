@@ -3,7 +3,7 @@
    qa.html, which the tauri build does not use as an entry). Load
    /qa.html?theme=light for the light theme. */
 import { createRoot } from "react-dom/client";
-import { ArrowRight, Check, Gauge, Wifi, HardDrive, Power, KeyRound } from "lucide-react";
+import { ArrowRight, Check, Gauge, Wifi, HardDrive, Power, KeyRound, ExternalLink } from "lucide-react";
 import "./index.css";
 
 const params = new URLSearchParams(location.search);
@@ -25,6 +25,24 @@ function App() {
         <div className="relative flex flex-col items-center text-center text-text-muted">
           <p className="text-display font-extrabold text-text-primary">Tell me what's wrong.</p>
           <p className="text-display font-extrabold"><span className="aurora-text">I'll handle the rest.</span></p>
+        </div>
+      </S>
+
+      <S id="keyscreen" title="BYOK key gate — first-run onboarding">
+        <div className="flex flex-col items-center text-center" style={{ maxWidth: 440, margin: "0 auto" }}>
+          <div className="w-16 h-16 rounded-2xl mb-4 shadow-xl" style={{ background: "var(--aurora)" }} />
+          <span className="eyebrow mb-3"><KeyRound size={12} style={{ marginRight: 4, verticalAlign: "-1px" }} /> Bring your own key</span>
+          <h1 className="text-title font-bold text-text-primary">Add your Anthropic API key</h1>
+          <p className="text-body text-text-muted mt-2 leading-relaxed">Noah runs on your own Anthropic API key — it's stored locally on this device and used only to talk to Anthropic. You pay Anthropic directly, just for what you use.</p>
+          <div className="card-soft px-5 py-5 w-full mt-5">
+            <input placeholder="sk-ant-…" className="w-full px-4 py-2.5 rounded-input bg-bg-input border border-border-primary text-sm text-text-primary placeholder-text-muted outline-none" />
+            <button className="btn-launch w-full mt-3 inline-flex items-center justify-center gap-2 rounded-btn px-5 py-3 text-body font-semibold">Save key &amp; continue <ArrowRight size={16} /></button>
+          </div>
+          <div className="mt-5 flex flex-col items-center gap-2">
+            <p className="text-caption text-text-muted leading-relaxed">Don't have one yet? Create a key in the Anthropic Console under Settings → API keys.</p>
+            <span className="inline-flex items-center gap-1.5 text-caption font-semibold text-accent-indigo">Get an API key <ExternalLink size={13} /></span>
+            <p className="text-micro text-text-muted mt-1">Support for OpenAI and other providers is coming soon.</p>
+          </div>
         </div>
       </S>
 
