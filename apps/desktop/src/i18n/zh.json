@@ -287,6 +287,15 @@
     "write_knowledge": "已保存笔记"
   },
   "onboarding": {
+    "key": {
+      "eyebrow": "使用你自己的密钥",
+      "title": "添加你的 Anthropic API 密钥",
+      "subtitle": "Noah 使用你自己的 Anthropic API 密钥。它仅保存在本设备本地，且只用于与 Anthropic 通信。你直接向 Anthropic 付费，只为实际用量付费。",
+      "where": "还没有密钥？在 Anthropic 控制台的“设置 → API 密钥”中创建一个。",
+      "getKey": "获取 API 密钥",
+      "soon": "即将支持 OpenAI 及其他服务商。",
+      "save": "保存密钥并继续"
+    },
     "eyebrow": "开始",
     "greeting": "你好，我是 Noah。你的电脑出什么问题了？",
     "subgreeting": "选择最接近的描述 — 你可以稍后告诉我更多。",

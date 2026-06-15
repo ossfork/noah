@@ -15,6 +15,7 @@ import { ProactiveSuggestionBanner } from "./components/ProactiveSuggestionBanne
 import { SessionSummary } from "./components/SessionSummary";
 import { useSessionStore } from "./stores/sessionStore";
 import { TilePickerScreen } from "./components/TilePickerScreen";
+import { ApiKeyOnboarding } from "./components/ApiKeyOnboarding";
 import { useDebugStore, type DebugEvent } from "./stores/debugStore";
 import { useTheme } from "./hooks/useTheme";
 import { useZoom } from "./hooks/useZoom";
@@ -40,6 +41,7 @@ function dismissSplash() {
 
 function App() {
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
+  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   useTheme(); // Apply saved theme on mount (before setup screen too)
 
   // First-launch gate (BYOK): show the TilePicker problem-picker only when
@@ -51,22 +53,32 @@ function App() {
   useEffect(() => {
     commands
       .listSessions()
-      .then((sessions) => {
-        setNeedsSetup(sessions.length === 0);
-      })
-      .catch(() => {
-        setNeedsSetup(false);
-      })
-      .finally(() => {
-        dismissSplash();
-      });
+      .then((sessions) => setNeedsSetup(sessions.length === 0))
+      .catch(() => setNeedsSetup(false));
+    // BYOK key gate: Noah runs on the user's own Anthropic key. Treat a probe
+    // failure as "no key" so a brand-new user lands on the key screen rather
+    // than in a chat whose first LLM call would fail.
+    commands
+      .hasApiKey()
+      .then(setHasApiKey)
+      .catch(() => setHasApiKey(false));
   }, []);
 
-  // Show nothing while checking (splash is still visible).
-  if (needsSetup === null) return null;
+  // Dismiss the splash only once BOTH gates resolve (avoids a blank flash).
+  useEffect(() => {
+    if (needsSetup !== null && hasApiKey !== null) dismissSplash();
+  }, [needsSetup, hasApiKey]);
 
-  // First run → problem picker. It seeds the first chat turn and calls
-  // onComplete to drop into the app.
+  // Still checking → keep the splash up.
+  if (needsSetup === null || hasApiKey === null) return null;
+
+  // No API key yet → key gate (the BYOK analog of the paywall moment). Once a
+  // valid key is saved we continue into the normal first-run flow.
+  if (!hasApiKey) {
+    return <ApiKeyOnboarding onComplete={() => setHasApiKey(true)} />;
+  }
+
+  // First run → problem picker. Seeds the first chat turn, then drops into the app.
   if (needsSetup) {
     return <TilePickerScreen onComplete={() => setNeedsSetup(false)} />;
   }

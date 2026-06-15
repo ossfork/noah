@@ -25,6 +25,15 @@
     }
   },
   "onboarding": {
+    "key": {
+      "eyebrow": "Usa tu propia clave",
+      "title": "Añade tu clave de API de Anthropic",
+      "subtitle": "Noah funciona con tu propia clave de API de Anthropic: se guarda localmente en este dispositivo y solo se usa para comunicarse con Anthropic. Pagas a Anthropic directamente, solo por lo que uses.",
+      "where": "¿Aún no tienes una? Crea una clave en la consola de Anthropic, en Ajustes → Claves de API.",
+      "getKey": "Obtener una clave de API",
+      "soon": "Pronto habrá compatibilidad con OpenAI y otros proveedores.",
+      "save": "Guardar clave y continuar"
+    },
     "eyebrow": "Empezar",
     "greeting": "Hola, soy Noah. ¿Qué le pasa a tu computadora?",
     "subgreeting": "Elige lo más parecido — me puedes contar más en un momento.",

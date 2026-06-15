@@ -74,6 +74,15 @@
     "settingsUpdateAvailable": "Settings · Update available"
   },
   "onboarding": {
+    "key": {
+      "eyebrow": "Bring your own key",
+      "title": "Add your Anthropic API key",
+      "subtitle": "Noah runs on your own Anthropic API key — it's stored locally on this device and used only to talk to Anthropic. You pay Anthropic directly, just for what you use.",
+      "where": "Don't have one yet? Create a key in the Anthropic Console under Settings → API keys.",
+      "getKey": "Get an API key",
+      "soon": "Support for OpenAI and other providers is coming soon.",
+      "save": "Save key & continue"
+    },
     "eyebrow": "Get started",
     "greeting": "Hi, I'm Noah. What's going on with your {device}?",
     "subgreeting": "Pick the closest match — you can tell me more in a moment.",
