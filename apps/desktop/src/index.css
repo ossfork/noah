@@ -1,18 +1,21 @@
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
-/* ── Noah — Aurora Design System ──
+/* ── Noah — Monochrome Design System (OSS "Noah for Tinkerers") ──
  *
  * See docs/DESIGN_PRINCIPLES.md for the full rationale. In short:
  *
- *   • One color family. The aurora gradient (sky-blue → indigo →
- *     violet) is Noah's identity. Every interactive accent lives
- *     within that arc.
- *   • Two registers — Launch (aurora gradient: aim Noah at a problem)
- *     and Commit (aurora-teal: subscribe, success). Distinct but
- *     visually related, both cool.
- *   • Saturation is reserved. The most-saturated thing on screen
- *     is the one thing the user is supposed to do next.
+ *   • Grayscale only. There is no brand hue. The identity is the wrench
+ *     mark + a disciplined neutral palette. The many "--color-accent-*"
+ *     / "--aurora*" tokens keep their names (backward compat) but every
+ *     one now resolves to a neutral gray.
+ *   • Contrast is the hierarchy. The one primary action carries weight
+ *     by CONTRAST, not color: near-white fill on the dark theme
+ *     (light-on-dark), near-black fill on light (dark-on-light). Its
+ *     label flips via --btn-on-aurora so it stays legible either way.
+ *   • Red + amber are the ONLY colors. They are reserved for danger and
+ *     warning semantics (--color-accent-red / -amber, --tone-bad-* /
+ *     --tone-warn-*) and appear nowhere else.
  *   • Soft elevation, not hard borders. Cards float; they aren't
  *     framed. Identity lives in hover/focus, not in static chrome.
  */
@@ -46,25 +49,21 @@
   /* Subtle neutral borders — slightly more visible against the
      warmer bg-primary so card edges stay defined. */
   --color-border-primary: #353944;
-  --color-border-focus: #5b9bd5;
+  --color-border-focus: #71717a;
 
-  /* Aurora system — single hue family.
-     • aurora-blue is the leftmost end of the gradient; used standalone
-       for everyday chat actions (Submit a question, focus rings).
-     • aurora-indigo / aurora-violet are the gradient's middle/right;
-       used together (--aurora) for launch moments only.
-     • aurora-teal (--color-accent-green) is the COMMIT register —
-       cool seafoam, NOT grass green. Sits next to aurora-blue in
-       hue space, so subscribe/result feels related, not foreign.
-     • aurora-purple is for Plan-label content (semantic hue, not action).  */
-  --color-accent-blue: #5b9bd5;
-  --color-accent-blue-soft: rgba(91, 155, 213, 0.12);
-  --color-accent-indigo: #6366f1;
-  --color-accent-violet: #8b5cf6;
-  /* Aurora-teal — replaces the old grass-green (#34d399). Same
-     semantic role (commit / success), unified hue family. */
-  --color-accent-green: #14b8a6;
-  --color-accent-green-soft: rgba(20, 184, 166, 0.12);
+  /* Monochrome system — grayscale only.
+     These "accent-*" tokens keep their names for backward compat with
+     hundreds of callsites, but they no longer carry hue: every one is a
+     neutral gray. Hierarchy comes from CONTRAST + weight, not color.
+     The ONLY colors in the app are red (danger) and amber (warning),
+     defined below and left untouched. See docs/DESIGN_PRINCIPLES.md. */
+  --color-accent-blue: #9ca3af;
+  --color-accent-blue-soft: rgba(156, 163, 175, 0.12);
+  --color-accent-indigo: #d4d4d8;
+  --color-accent-violet: #a1a1aa;
+  /* Former "commit / success" hue — now a neutral gray like the rest. */
+  --color-accent-green: #a1a1aa;
+  --color-accent-green-soft: rgba(161, 161, 170, 0.12);
   --color-accent-red: #f87171;
   --color-accent-red-soft: rgba(239, 68, 68, 0.12);
   --color-accent-amber: #fbbf24;
@@ -76,32 +75,37 @@
   --tone-bad-fg: #f87171;
   --tone-warn-bg: rgba(245, 158, 11, 0.14);
   --tone-warn-fg: #fbbf24;
-  --tone-ok-bg: rgba(16, 185, 129, 0.14);
-  --tone-ok-fg: #14b8a6;
+  --tone-ok-bg: rgba(161, 161, 170, 0.14);
+  --tone-ok-fg: #a1a1aa;
   /* Neutral "rest of the bar" segment in diagnosis meters (the everything-else
      memory slice, idle login-item pips, non-leading storage rows). Token'd so
      it follows the theme instead of being a fixed dark slate on a white card. */
   --color-meter-rest: #aab4c8;
-  --color-accent-purple: #a78bfa;
+  --color-accent-purple: #a1a1aa;
 
-  /* Aurora launch identity — used by buttons, focus glows, thinking
-     dots, and any "aim Noah at a problem" surface. Reference these
-     vars in inline styles or via Tailwind arbitrary-values. */
-  --aurora: linear-gradient(135deg, #5b9bd5 0%, #6366f1 50%, #8b5cf6 100%);
-  --aurora-soft: linear-gradient(135deg, rgba(91, 155, 213, 0.12), rgba(139, 92, 246, 0.12));
-  --aurora-glow: 0 8px 32px -12px rgba(99, 102, 241, 0.5);
-  --aurora-glow-hover: 0 12px 40px -10px rgba(99, 102, 241, 0.65);
+  /* Primary-action identity — the "aurora" name is kept for the hundreds
+     of callsites, but it's now a near-WHITE gradient. On the dark theme
+     the one primary button reads as light-on-dark; that contrast (not a
+     hue) is what makes it the most prominent thing on screen. Text on it
+     must be dark — see --btn-on-aurora. */
+  --aurora: linear-gradient(135deg, #fafafa, #ededf0, #d4d4d8);
+  /* Label/glyph color for anything filled with --aurora. Dark theme →
+     dark text on the near-white fill; light theme flips it (see .light). */
+  --btn-on-aurora: #18181b;
+  --aurora-soft: linear-gradient(135deg, rgba(156, 163, 175, 0.12), rgba(120, 120, 128, 0.12));
+  --aurora-glow: 0 8px 32px -12px rgba(120, 120, 128, 0.5);
+  --aurora-glow-hover: 0 12px 40px -10px rgba(120, 120, 128, 0.65);
   /* Tightened from a wide-spread halo to a contained drop. The previous
      value bled past the card edge and read as "you're about to do
      something irreversible" — wrong feeling for "restart Wi-Fi". The
      aurora gradient still carries the brand; the shadow just grounds it. */
   --aurora-shadow-button:
     0 1px 0 rgba(255, 255, 255, 0.18) inset,
-    0 6px 18px -6px rgba(99, 102, 241, 0.55),
+    0 6px 18px -6px rgba(120, 120, 128, 0.55),
     0 1px 2px rgba(0, 0, 0, 0.18);
   --aurora-shadow-button-hover:
     0 1px 0 rgba(255, 255, 255, 0.22) inset,
-    0 8px 22px -6px rgba(99, 102, 241, 0.7),
+    0 8px 22px -6px rgba(120, 120, 128, 0.7),
     0 1px 2px rgba(0, 0, 0, 0.2);
 
   /* Commit moments share the launch identity — same aurora gradient,
@@ -111,24 +115,24 @@
   --commit-gradient: var(--aurora);
   --commit-shadow:
     0 1px 0 rgba(255, 255, 255, 0.18) inset,
-    0 6px 16px -4px rgba(99, 102, 241, 0.55),
+    0 6px 16px -4px rgba(120, 120, 128, 0.55),
     0 2px 4px rgba(0, 0, 0, 0.15);
 
   /* Status */
-  --color-status-active: #14b8a6;
+  --color-status-active: #a1a1aa;
   --color-status-idle: #6b7280;
   --color-status-pending: #fbbf24;
-  --color-status-running: #5b9bd5;
+  --color-status-running: #9ca3af;
   --color-status-error: #f87171;
   --color-status-denied: #6b7280;
 
   /* Seamless chat surfaces — neutral, soft elevation */
   --color-surface-card: rgba(255, 255, 255, 0.02);
   --color-surface-card-border: rgba(255, 255, 255, 0.06);
-  --color-accent-border: rgba(91, 155, 213, 0.14);
+  --color-accent-border: rgba(156, 163, 175, 0.14);
   --color-surface-pill: rgba(36, 39, 46, 0.7);
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 24px -12px rgba(0, 0, 0, 0.45);
-  --shadow-card-hover: 0 1px 2px rgba(0, 0, 0, 0.25), 0 12px 32px -12px rgba(99, 102, 241, 0.25);
+  --shadow-card-hover: 0 1px 2px rgba(0, 0, 0, 0.25), 0 12px 32px -12px rgba(120, 120, 128, 0.25);
 
   /* Eyebrow text — muted neutral, NOT accent. Section labels are
      plumbing; the aurora hairline + gradient CTA carry the brand. */
@@ -207,18 +211,18 @@
     --color-text-inverse: #ffffff;
 
     --color-border-primary: #d4dae8;
-    --color-border-focus: #2563eb;
+    --color-border-focus: #6b7280;
 
-    --color-accent-blue: #2563eb;
-    --color-accent-blue-soft: rgba(37, 99, 235, 0.08);
-    --color-accent-indigo: #4f46e5;
-    --color-accent-violet: #7c3aed;
-    /* Light-mode tones tuned per design-agent diff: deeper, less screaming.
-       The dark-mode hex (#14b8a6 teal, #fbbf24 amber) reads as "alert" on
-       a white card; these darker, more-saturated alternates carry the
-       same semantic without shouting. */
-    --color-accent-green: #0f7b5a;
-    --color-accent-green-soft: rgba(15, 123, 90, 0.1);
+    --color-accent-blue: #6b7280;
+    --color-accent-blue-soft: rgba(107, 114, 128, 0.08);
+    --color-accent-indigo: #3f3f46;
+    --color-accent-violet: #52525b;
+    /* Light-mode values: deeper grays for the (now colorless) accents, and
+       deeper red/amber. The bright dark-mode amber (#fbbf24) reads as
+       "alert" on a white card; the darker alternate carries the same
+       warning semantic without shouting. */
+    --color-accent-green: #52525b;
+    --color-accent-green-soft: rgba(82, 82, 91, 0.1);
     --color-accent-red: #dc2626;
     --color-accent-red-soft: rgba(220, 38, 38, 0.1);
     --color-accent-amber: #b86e12;
@@ -230,38 +234,38 @@
     --tone-bad-fg: #dc2626;
     --tone-warn-bg: rgba(184, 110, 18, 0.12);
     --tone-warn-fg: #b86e12;
-    --tone-ok-bg: rgba(15, 123, 90, 0.12);
-    --tone-ok-fg: #0f7b5a;
+    --tone-ok-bg: rgba(82, 82, 91, 0.12);
+    --tone-ok-fg: #52525b;
     --color-meter-rest: #b9c1d1;
-    --color-accent-purple: #7c3aed;
+    --color-accent-purple: #52525b;
 
-    /* Aurora launch — light mode tuned for white-card contrast.
-       Per Principle 9: light-mode accents are slightly MORE saturated
-       than dark-mode (white surfaces wash out subtle aurora hues).
-       Soft / glow opacities run ~50–60% higher than dark-mode pairs. */
-    --aurora: linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #7c3aed 100%);
-    --aurora-soft: linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(124, 58, 237, 0.16));
-    --aurora-glow: 0 8px 28px -10px rgba(79, 70, 229, 0.55);
-    --aurora-glow-hover: 0 12px 36px -8px rgba(79, 70, 229, 0.7);
+    /* Primary-action identity — light mode. The near-BLACK gradient makes
+       the one primary button read as dark-on-light: maximum contrast on a
+       white card, no hue required. Text on it flips to white below. */
+    --aurora: linear-gradient(135deg, #27272a, #18181b, #000);
+    --btn-on-aurora: #ffffff;
+    --aurora-soft: linear-gradient(135deg, rgba(107, 114, 128, 0.16), rgba(82, 82, 91, 0.16));
+    --aurora-glow: 0 8px 28px -10px rgba(24, 24, 27, 0.55);
+    --aurora-glow-hover: 0 12px 36px -8px rgba(24, 24, 27, 0.7);
     --aurora-shadow-button:
       0 1px 0 rgba(255, 255, 255, 0.4) inset,
-      0 6px 18px -6px rgba(79, 70, 229, 0.4),
+      0 6px 18px -6px rgba(24, 24, 27, 0.4),
       0 1px 2px rgba(15, 23, 41, 0.1);
     --aurora-shadow-button-hover:
       0 1px 0 rgba(255, 255, 255, 0.5) inset,
-      0 8px 22px -6px rgba(79, 70, 229, 0.55),
+      0 8px 22px -6px rgba(24, 24, 27, 0.55),
       0 1px 2px rgba(15, 23, 41, 0.12);
 
     --commit-gradient: var(--aurora);
     --commit-shadow:
       0 1px 0 rgba(255, 255, 255, 0.4) inset,
-      0 6px 16px -4px rgba(79, 70, 229, 0.4),
+      0 6px 16px -4px rgba(24, 24, 27, 0.4),
       0 1px 2px rgba(15, 23, 41, 0.08);
 
-    --color-status-active: #0d9488;
+    --color-status-active: #52525b;
     --color-status-idle: #7889a5;
     --color-status-pending: #d97706;
-    --color-status-running: #2563eb;
+    --color-status-running: #6b7280;
     --color-status-error: #dc2626;
     --color-status-denied: #7889a5;
 
@@ -274,10 +278,10 @@
        melts into the page. 7% slate hairline is the ground truth (per
        design-agent diff, polish pass 3). */
     --color-surface-card-border: rgba(15, 23, 41, 0.07);
-    --color-accent-border: rgba(37, 99, 235, 0.2);
+    --color-accent-border: rgba(107, 114, 128, 0.2);
     --color-surface-pill: rgba(232, 236, 244, 0.6);
     --shadow-card: 0 1px 2px rgba(15, 23, 41, 0.05), 0 8px 24px -12px rgba(15, 23, 41, 0.14);
-    --shadow-card-hover: 0 1px 2px rgba(15, 23, 41, 0.05), 0 12px 32px -10px rgba(79, 70, 229, 0.28);
+    --shadow-card-hover: 0 1px 2px rgba(15, 23, 41, 0.05), 0 12px 32px -10px rgba(24, 24, 27, 0.28);
 
     --text-eyebrow: #6b7280;
 }
@@ -354,7 +358,7 @@ h1, h2, h3, h4 {
    that aims Noah at a problem. Reserved; do not overuse. */
 .btn-launch {
   background: var(--aurora);
-  color: white;
+  color: var(--btn-on-aurora);
   box-shadow: var(--aurora-shadow-button);
   transition: transform 0.12s ease, box-shadow 0.2s ease;
 }
@@ -379,7 +383,7 @@ h1, h2, h3, h4 {
 .btn-commit {
   position: relative;
   background: var(--aurora);
-  color: white;
+  color: var(--btn-on-aurora);
   letter-spacing: -0.005em;
   /* Stack of shadows builds depth:
        1. inset top hairline — luminous edge
@@ -389,7 +393,7 @@ h1, h2, h3, h4 {
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.4) inset,
     0 -1px 0 rgba(0, 0, 0, 0.18) inset,
-    0 10px 28px -6px rgba(99, 102, 241, 0.6),
+    0 10px 28px -6px rgba(120, 120, 128, 0.6),
     0 2px 4px rgba(0, 0, 0, 0.18);
   transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
   overflow: hidden;
@@ -413,7 +417,7 @@ h1, h2, h3, h4 {
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.5) inset,
     0 -1px 0 rgba(0, 0, 0, 0.18) inset,
-    0 16px 38px -6px rgba(99, 102, 241, 0.8),
+    0 16px 38px -6px rgba(120, 120, 128, 0.8),
     0 2px 4px rgba(0, 0, 0, 0.2);
 }
 .btn-commit:active:not(:disabled) { transform: translateY(0.5px); }
@@ -422,11 +426,11 @@ h1, h2, h3, h4 {
    Used for in-card Submit on question/answer surfaces. */
 .btn-action {
   background: var(--color-accent-blue);
-  color: white;
+  color: var(--btn-on-aurora);
   transition: box-shadow 0.2s ease, transform 0.12s ease;
 }
 .btn-action:hover:not(:disabled) {
-  box-shadow: 0 6px 18px -4px rgba(99, 102, 241, 0.45);
+  box-shadow: 0 6px 18px -4px rgba(120, 120, 128, 0.45);
   transform: translateY(-0.5px);
 }
 .btn-action:active:not(:disabled) { transform: translateY(0.5px); }
@@ -452,10 +456,10 @@ h1, h2, h3, h4 {
 .aurora-focus:focus,
 .aurora-focus:focus-within {
   outline: none;
-  border-color: rgba(99, 102, 241, 0.5);
+  border-color: rgba(120, 120, 128, 0.5);
   box-shadow:
-    0 0 0 4px rgba(99, 102, 241, 0.08),
-    0 8px 32px -12px rgba(99, 102, 241, 0.4);
+    0 0 0 4px rgba(120, 120, 128, 0.08),
+    0 8px 32px -12px rgba(120, 120, 128, 0.4);
 }
 
 /* Composer "launch surface" — Principle 1 says the composer is the
@@ -465,30 +469,30 @@ h1, h2, h3, h4 {
    to the full aurora-focus state above. Distinct from `aurora-focus`,
    which is invisible at rest. */
 .composer-launch {
-  border-color: rgba(99, 102, 241, 0.22);
+  border-color: rgba(120, 120, 128, 0.22);
   box-shadow:
-    0 0 0 1px rgba(99, 102, 241, 0.06) inset,
-    0 6px 20px -10px rgba(99, 102, 241, 0.22);
+    0 0 0 1px rgba(120, 120, 128, 0.06) inset,
+    0 6px 20px -10px rgba(120, 120, 128, 0.22);
   transition: box-shadow 0.25s ease, border-color 0.25s ease;
 }
 .composer-launch:focus-within {
   outline: none;
-  border-color: rgba(99, 102, 241, 0.55);
+  border-color: rgba(120, 120, 128, 0.55);
   box-shadow:
-    0 0 0 4px rgba(99, 102, 241, 0.1),
-    0 10px 36px -10px rgba(99, 102, 241, 0.45);
+    0 0 0 4px rgba(120, 120, 128, 0.1),
+    0 10px 36px -10px rgba(120, 120, 128, 0.45);
 }
 :root.light .composer-launch {
-  border-color: rgba(79, 70, 229, 0.28);
+  border-color: rgba(24, 24, 27, 0.28);
   box-shadow:
-    0 0 0 1px rgba(79, 70, 229, 0.05) inset,
-    0 6px 18px -8px rgba(79, 70, 229, 0.28);
+    0 0 0 1px rgba(24, 24, 27, 0.05) inset,
+    0 6px 18px -8px rgba(24, 24, 27, 0.28);
 }
 :root.light .composer-launch:focus-within {
-  border-color: rgba(79, 70, 229, 0.6);
+  border-color: rgba(24, 24, 27, 0.6);
   box-shadow:
-    0 0 0 4px rgba(79, 70, 229, 0.12),
-    0 10px 36px -8px rgba(79, 70, 229, 0.4);
+    0 0 0 4px rgba(24, 24, 27, 0.12),
+    0 10px 36px -8px rgba(24, 24, 27, 0.4);
 }
 
 /* "Done" / "Sent" state — alive, not dead.
@@ -499,7 +503,7 @@ h1, h2, h3, h4 {
 .btn-done {
   background: var(--color-accent-green-soft);
   color: var(--color-accent-green);
-  box-shadow: inset 0 0 0 1px rgba(20, 184, 166, 0.25);
+  box-shadow: inset 0 0 0 1px rgba(161, 161, 170, 0.25);
   cursor: default;
   transition: none;
 }
@@ -522,14 +526,14 @@ h1, h2, h3, h4 {
 /* Quiet aurora wash — for everyday nav items (Scorecards, Knowledge). */
 .row-hover:hover .icon-tile,
 .icon-tile.active {
-  background: rgba(99, 102, 241, 0.18);
+  background: rgba(120, 120, 128, 0.18);
   color: var(--color-text-primary);
 }
 /* Full aurora gradient — only on the primary launch nav item (New chat). */
 .row-hover:hover .icon-tile.launch,
 .icon-tile.launch.active {
   background: var(--aurora);
-  color: white;
+  color: var(--btn-on-aurora);
   box-shadow: var(--aurora-glow);
 }
 
@@ -550,7 +554,7 @@ h1, h2, h3, h4 {
   40% {
     opacity: 1;
     transform: scale(1);
-    box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 12px rgba(120, 120, 128, 0.5);
   }
 }
 
@@ -591,7 +595,7 @@ h1, h2, h3, h4 {
   border: 1px solid var(--color-accent-border);
   transition: background 0.22s ease, color 0.22s ease, border-color 0.22s ease;
 }
-.tile.sel .chip { background: var(--aurora); color: #fff; border-color: transparent; }
+.tile.sel .chip { background: var(--aurora); color: var(--btn-on-aurora); border-color: transparent; }
 .tile .check {
   position: absolute;
   top: 11px;
@@ -600,7 +604,7 @@ h1, h2, h3, h4 {
   height: 18px;
   border-radius: 50%;
   background: var(--aurora);
-  color: #fff;
+  color: var(--btn-on-aurora);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -763,7 +767,7 @@ h1, h2, h3, h4 {
   transition: border-color 0.18s ease, transform 0.12s ease, box-shadow 0.2s ease;
 }
 .btn-soft:hover:not(:disabled) {
-  border-color: rgba(99, 102, 241, 0.4);
+  border-color: rgba(120, 120, 128, 0.4);
   transform: translateY(-0.5px);
 }
 .btn-soft:active:not(:disabled) { transform: translateY(0.5px); }
@@ -829,12 +833,12 @@ h1, h2, h3, h4 {
    color cueing from the soft chip BEHIND it, never from a multicolor
    glyph. One soft accent per problem domain. */
 .tint-blue   { background: var(--color-accent-blue-soft); color: var(--color-accent-blue); }
-.tint-indigo { background: rgba(99, 102, 241, 0.12);      color: var(--color-accent-indigo); }
-.tint-violet { background: rgba(139, 92, 246, 0.14);      color: var(--color-accent-violet); }
+.tint-indigo { background: rgba(120, 120, 128, 0.12);      color: var(--color-accent-indigo); }
+.tint-violet { background: rgba(120, 120, 128, 0.14);      color: var(--color-accent-violet); }
 .tint-amber  { background: var(--tone-warn-bg);           color: var(--tone-warn-fg); }
 .tint-green  { background: var(--tone-ok-bg);             color: var(--tone-ok-fg); }
-:root.light .tint-indigo { background: rgba(79, 70, 229, 0.1); }
-:root.light .tint-violet { background: rgba(124, 58, 237, 0.12); }
+:root.light .tint-indigo { background: rgba(24, 24, 27, 0.1); }
+:root.light .tint-violet { background: rgba(82, 82, 91, 0.12); }
 
 /* Agentic progress — a live "working" headline with sub-steps that stream
    in and check off. For multi-stage work a bare spinner under-sells what
@@ -868,15 +872,15 @@ h1, h2, h3, h4 {
 .agent-step.active { color: var(--color-text-primary); font-weight: 600; }
 .agent-step.active .ic {
   background: var(--aurora);
-  color: #fff;
+  color: var(--btn-on-aurora);
   animation: agent-pulse 1.6s ease-out infinite;
 }
 .agent-step.pending { color: var(--color-text-muted); }
 .agent-step.pending .ic { box-shadow: inset 0 0 0 1.5px var(--color-border-primary); }
 @keyframes agent-pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.45); }
-  70%  { box-shadow: 0 0 0 7px rgba(99, 102, 241, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(120, 120, 128, 0.45); }
+  70%  { box-shadow: 0 0 0 7px rgba(120, 120, 128, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(120, 120, 128, 0); }
 }
 
 /* Generic badge primitives — layout + size only; color comes from a

@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-"""Canonical generator for the Noah brand mark.
+"""Canonical generator for the Noah brand mark (OSS monochrome identity).
 
 This is the SINGLE SOURCE OF TRUTH for the icon geometry. To change the
-mark — even by a degree of tilt or a pixel of stroke width — edit the
-parameters in PARAMS below and re-run:
+mark — even by a pixel of stroke width — edit the parameters in PARAMS
+below and re-run:
 
     ~/.claude-python/bin/python brand/build.py
     bash brand/sync.sh
@@ -11,121 +11,92 @@ parameters in PARAMS below and re-run:
 That regenerates both SVG sources (bare + plated) and propagates them
 to every surface (website favicon, in-page logo, desktop icon variants).
 
+The mark is a WRENCH (Lucide "wrench" glyph) — the open-source "Noah for
+Tinkerers" identity. Strictly black-and-white: a near-white wrench on a
+near-black rounded tile (the app icon), or a bare wrench glyph on
+transparent. No ring, no aurora, no color. Red and amber stay reserved
+for in-app safety semantics only — they never appear in the mark.
+
 Why this exists: we kept ending up with four different "Noah" marks
 across surfaces because the geometry was duplicated as inline CSS, as
 hand-written SVG paths, and as platform-specific raster icons. From
 this point forward, only this script writes the SVG, only sync.sh
-copies it outward, and no surface hand-codes the arcs.
+copies it outward, and no surface hand-codes the glyph.
 """
 from __future__ import annotations
 
-import math
 import pathlib
 
 
 # ── Brand parameters. Edit here and re-run to update everywhere. ───
+# Canvas is 128 units. The Lucide "wrench" path is authored on a 24-unit
+# grid; we translate+scale it to sit centered on the canvas.
 PARAMS = {
-    "arc_degrees": 180,    # visible arc length per ring
-    "tilt_degrees": -20,   # per-ring rotation around its own center
-    "stroke": 10.24,       # 0.08 of the 128-unit canvas
-    "ring_radius": 33.28,  # 0.26 of canvas
-    "dot_radius": 8.96,    # 0.07 of canvas
-    "cool_center": (56.32, 58.88),   # NW of canvas center
-    "warm_center": (71.68, 69.12),   # SE of canvas center
-    "plate_corner_radius": 28,       # rounded-square plate
-    "symbol_scale_on_plate": 0.71875,  # 92/128 — symbol fills 72% of plate
+    "glyph_scale": 3.072,      # 24·3.072 = 73.7 units → glyph fills ~58% of canvas
+    "glyph_translate": 26.88,  # (128 − 73.7) / 2, centered on both axes
+    "stroke": 2.0,             # in glyph units → 6.14 effective (~4.8% of canvas)
+    "plate_corner_radius": 29,  # 23% of 128 — rounded-square app tile
 }
 
-COOL_COLOR = "#5b9bd5"  # aurora-start
-WARM_COLOR = "#8b5cf6"  # aurora-end
-DOT_COLOR = "#6366f1"   # aurora-mid
+# Monochrome palette. Near-black tile, near-white glyph. That is the
+# whole system — there is no second brand color.
+PLATE_TOP = "#171719"     # near-black, top of the tile gradient
+PLATE_BOTTOM = "#0e0e10"  # a touch darker at the bottom
+GLYPH_COLOR = "#fafafa"   # near-white wrench
+
+# Lucide "wrench" path, authored on a 24×24 grid.
+WRENCH_PATH = (
+    "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77"
+    "a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91"
+    "a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+)
 
 
-def _arc_endpoints(cx, cy, r, arc_center_angle, arc_degrees):
-    """Return (start_xy, end_xy) for a 180°-symmetric arc around arc_center_angle."""
-    half = arc_degrees / 2.0
-    start = math.radians(arc_center_angle - half)
-    end = math.radians(arc_center_angle + half)
+def _glyph(p, stroke_color: str) -> str:
+    """The wrench glyph, translated + scaled to sit centered on the canvas."""
+    t = p["glyph_translate"]
+    s = p["glyph_scale"]
+    sw = p["stroke"]
     return (
-        (cx + math.cos(start) * r, cy + math.sin(start) * r),
-        (cx + math.cos(end) * r, cy + math.sin(end) * r),
+        f'  <g transform="translate({t:.2f} {t:.2f}) scale({s})" '
+        f'fill="none" stroke="{stroke_color}" stroke-width="{sw}" '
+        f'stroke-linecap="round" stroke-linejoin="round">\n'
+        f'    <path d="{WRENCH_PATH}"/>\n'
+        f"  </g>"
     )
 
 
-def _symbol_inner(p):
-    """The arcs + dot, sized to fit a 128-unit viewBox at full scale."""
-    cool_start, cool_end = _arc_endpoints(*p["cool_center"], p["ring_radius"], 225, p["arc_degrees"])
-    warm_start, warm_end = _arc_endpoints(*p["warm_center"], p["ring_radius"], 45, p["arc_degrees"])
-    large_arc = 1 if p["arc_degrees"] > 180 else 0
-    r = p["ring_radius"]
-    sw = p["stroke"]
-    tilt = p["tilt_degrees"]
-    ccx, ccy = p["cool_center"]
-    wcx, wcy = p["warm_center"]
-    return f"""    <g transform="rotate({tilt} {ccx} {ccy})">
-      <path d="M {cool_start[0]:.2f} {cool_start[1]:.2f} A {r:.2f} {r:.2f} 0 {large_arc} 1 {cool_end[0]:.2f} {cool_end[1]:.2f}"
-            fill="none" stroke="{COOL_COLOR}" stroke-width="{sw}" stroke-linecap="round"
-            filter="url(#glowCool)"/>
-    </g>
-    <g transform="rotate({tilt} {wcx} {wcy})">
-      <path d="M {warm_start[0]:.2f} {warm_start[1]:.2f} A {r:.2f} {r:.2f} 0 {large_arc} 1 {warm_end[0]:.2f} {warm_end[1]:.2f}"
-            fill="none" stroke="{WARM_COLOR}" stroke-width="{sw}" stroke-linecap="round"
-            filter="url(#glowWarm)"/>
-    </g>
-    <circle cx="64" cy="64" r="{p['dot_radius']}" fill="{DOT_COLOR}"/>"""
-
-
-_FILTERS = """  <defs>
-    <filter id="glowCool" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="1.8" result="b"/>
-      <feColorMatrix in="b" type="matrix"
-        values="0 0 0 0 0.357
-                0 0 0 0 0.608
-                0 0 0 0 0.835
-                0 0 0 0.5 0" result="c"/>
-      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-    <filter id="glowWarm" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="1.8" result="b"/>
-      <feColorMatrix in="b" type="matrix"
-        values="0 0 0 0 0.545
-                0 0 0 0 0.361
-                0 0 0 0 0.965
-                0 0 0 0.5 0" result="c"/>
-      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>"""
-
-
 def build_bare(p) -> str:
+    """Bare wrench glyph on a transparent canvas (near-white stroke).
+
+    Feeds the Android adaptive-icon foreground (composited over a dark
+    background layer) and any surface that supplies its own backdrop.
+    """
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Noah">
   <title>Noah</title>
-{_FILTERS}
-  </defs>
-{_symbol_inner(p)}
+{_glyph(p, GLYPH_COLOR)}
 </svg>
 """
 
 
 def build_plated(p) -> str:
-    s = p["symbol_scale_on_plate"]
-    # Symbol viewBox is 128 units; scaled by s, it covers 128·s units.
-    # Center inside the 128-unit plate by translating (128 - 128·s)/2.
-    translate = (128 - 128 * s) / 2
+    """Wrench on a rounded near-black tile — the app icon. Self-contained,
+    so it reads on any background (dock, taskbar, splash, in-app header),
+    in both light and dark themes.
+    """
     rx = p["plate_corner_radius"]
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Noah">
   <title>Noah</title>
-{_FILTERS}
-    <linearGradient id="plateWash" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%"  stop-color="{COOL_COLOR}" stop-opacity="0.10"/>
-      <stop offset="100%" stop-color="{WARM_COLOR}" stop-opacity="0.10"/>
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="{PLATE_TOP}"/>
+      <stop offset="1" stop-color="{PLATE_BOTTOM}"/>
     </linearGradient>
+    <clipPath id="tile"><rect width="128" height="128" rx="{rx}"/></clipPath>
   </defs>
-
-  <rect width="128" height="128" rx="{rx}" fill="#ffffff"/>
-  <rect width="128" height="128" rx="{rx}" fill="url(#plateWash)"/>
-
-  <g transform="translate({translate:.2f} {translate:.2f}) scale({s})">
-{_symbol_inner(p)}
+  <g clip-path="url(#tile)">
+    <rect width="128" height="128" fill="url(#plate)"/>
+{_glyph(p, GLYPH_COLOR)}
   </g>
 </svg>
 """

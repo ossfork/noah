@@ -235,7 +235,7 @@ function SessionItem({
           className="w-2 h-2 rounded-full flex-shrink-0"
           style={{
             background: "var(--color-accent-indigo)",
-            boxShadow: "0 0 8px rgba(99, 102, 241, 0.6)",
+            boxShadow: "0 0 8px rgba(120, 120, 128, 0.6)",
           }}
         />
       )}

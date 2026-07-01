@@ -104,7 +104,7 @@ function StepBullet({
       aria-hidden
       className="w-6 h-6 rounded-full flex items-center justify-center text-caption font-semibold shrink-0"
       style={{
-        border: "1.5px solid rgba(99, 102, 241, 0.3)",
+        border: "1.5px solid rgba(120, 120, 128, 0.3)",
         color: "var(--color-accent-indigo)",
         background: "transparent",
       }}

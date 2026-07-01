@@ -103,8 +103,8 @@ function PickStage({
       className="relative h-screen overflow-hidden"
       style={{
         background:
-          "radial-gradient(ellipse 80% 55% at 50% 0%, rgba(99, 102, 241, 0.16) 0%, transparent 70%), " +
-          "radial-gradient(ellipse 50% 45% at 90% 100%, rgba(139, 92, 246, 0.08) 0%, transparent 65%), " +
+          "radial-gradient(ellipse 80% 55% at 50% 0%, rgba(120, 120, 128, 0.16) 0%, transparent 70%), " +
+          "radial-gradient(ellipse 50% 45% at 90% 100%, rgba(120, 120, 128, 0.08) 0%, transparent 65%), " +
           "var(--color-bg-primary)",
       }}
     >
@@ -141,7 +141,7 @@ function PickStage({
                 <div
                   aria-hidden
                   className="absolute inset-0 rounded-2xl blur-2xl opacity-70"
-                  style={{ background: "rgba(99, 102, 241, 0.32)" }}
+                  style={{ background: "rgba(120, 120, 128, 0.32)" }}
                 />
                 <NoahIcon
                   className="relative w-20 h-20 rounded-2xl shadow-xl"

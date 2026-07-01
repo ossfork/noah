@@ -425,9 +425,9 @@ function AppearanceToggle({
           left: `calc(${(idx / 3) * 100}% + 4px)`,
           width: `calc(${100 / 3}% - 8px)`,
           background: "var(--color-bg-secondary)",
-          border: "1px solid rgba(99, 102, 241, 0.35)",
+          border: "1px solid rgba(120, 120, 128, 0.35)",
           boxShadow:
-            "0 1px 2px rgba(15,23,41,0.06), 0 0 0 3px rgba(99, 102, 241, 0.08)",
+            "0 1px 2px rgba(15,23,41,0.06), 0 0 0 3px rgba(120, 120, 128, 0.08)",
           transition: "left 220ms cubic-bezier(0.32, 0.72, 0, 1)",
         }}
       />
@@ -560,7 +560,7 @@ function NoahMark({ size = 14 }: { size?: number }) {
         height: size,
         borderRadius: radius,
         background: "var(--aurora)",
-        boxShadow: "0 0 0 1px rgba(99, 102, 241, 0.15)",
+        boxShadow: "0 0 0 1px rgba(120, 120, 128, 0.15)",
       }}
     />
   );

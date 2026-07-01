@@ -164,7 +164,7 @@ export function ActionApproval() {
             className="px-4 py-2 rounded-lg text-sm transition-colors cursor-pointer"
             style={{
               color: "var(--color-accent-indigo)",
-              border: "1px solid rgba(99, 102, 241, 0.4)",
+              border: "1px solid rgba(120, 120, 128, 0.4)",
               background: "transparent",
             }}
           >

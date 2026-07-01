@@ -70,23 +70,26 @@ def step_website() -> None:
 
 
 def step_desktop_public() -> None:
-    """The Tauri webview's HTML splash + favicon. Both consume bare PNG —
-    transparent corners so they sit on the splash background without a
-    visible plate seam. The HTML's border-radius is purely visual.
+    """The Tauri webview's HTML splash + favicon. Both consume the PLATED
+    PNG — the self-contained near-black tile reads on both the dark and
+    the light splash background (a bare near-white wrench would vanish on
+    the light theme). The HTML applies its own border-radius on top.
     """
-    print("[desktop/public] bare PNG → icon-32.png + noah-icon.png")
+    print("[desktop/public] plated PNG → icon-32.png + noah-icon.png")
     pub = DESKTOP / "public"
-    _render_png(BARE_SVG, 32, pub / "icon-32.png")
-    _render_png(BARE_SVG, 256, pub / "noah-icon.png")
+    _render_png(PLATED_SVG, 32, pub / "icon-32.png")
+    _render_png(PLATED_SVG, 256, pub / "noah-icon.png")
 
 
 def step_desktop_assets() -> None:
     """src/assets/noah-icon.svg is imported by NoahIcon.tsx (the in-app
-    header logo). We also remove the legacy PNG so it can't be re-imported.
+    logo chip). It gets the PLATED tile so the mark is theme-independent —
+    the same near-black app-icon chip in both light and dark mode. We also
+    remove the legacy PNG so it can't be re-imported.
     """
-    print("[desktop/src/assets] bare SVG → noah-icon.svg (delete legacy PNG)")
+    print("[desktop/src/assets] plated SVG → noah-icon.svg (delete legacy PNG)")
     assets = DESKTOP / "src/assets"
-    _copy_svg_with_warning(BARE_SVG, assets / "noah-icon.svg")
+    _copy_svg_with_warning(PLATED_SVG, assets / "noah-icon.svg")
     _delete_if_exists(assets / "noah-icon.png")
 
 
