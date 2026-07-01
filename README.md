@@ -99,6 +99,18 @@ the only other network calls are an update check and an anonymous, opt-out usage
 - **Hard limits** — the catastrophic operations (wiping your home folder or keychains, erasing a disk) are blocked outright and can't be approved away; everything else risky is gated behind your explicit approval
 - **Your key stays yours** — stored locally and used only to authenticate your own calls to Anthropic; it's never sent to a Noah server
 
+## Design notes
+
+How Noah is built, in depth — engineering design docs, each verified against the code:
+
+- [Architecture](docs/design/0-architecture.md) — the LLM thinks, the local machine acts
+- [Generative UI](docs/design/1-generative-ui.md) — the model fills UI slots instead of drawing components
+- [One thread](docs/design/2-one-thread.md) — text, UI, and tool calls share one conversation stream
+- [The safety harness](docs/design/3-safety-harness.md) — running real commands without running wild
+- [Every command explains itself](docs/design/4-command-explanations.md) — plain-English reasons, enforced by schema
+- [Playbooks](docs/design/5-playbooks.md) — Markdown as remediation programs
+- [Bring your own key](docs/design/6-bring-your-own-key.md) — an agent with no backend
+
 ## Open source & contributing
 
 Noah for Tinkerers is built in public. Issues, ideas, and pull requests are welcome — see
