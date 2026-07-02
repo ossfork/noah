@@ -1,5 +1,4 @@
 pub mod agent;
-mod autoheal;
 mod commands;
 mod dashboard_link;
 pub mod debug_runner;
@@ -8,7 +7,6 @@ mod knowledge;
 mod machine_context;
 mod platform;
 mod playbooks;
-mod proactive;
 mod safety;
 mod scanner;
 mod system_snapshot;
@@ -307,8 +305,6 @@ pub fn run() {
             // Load auth: BYOK API key file or env var.
             let auth = load_auth(&app_dir);
             let llm = LlmClient::with_auth(auth);
-            let llm_for_monitor = llm.clone();
-            let llm_for_autoheal = llm.clone();
 
             let pending_approvals: PendingApprovals =
                 Arc::new(Mutex::new(HashMap::<String, oneshot::Sender<bool>>::new()));
@@ -349,12 +345,6 @@ pub fn run() {
             // Clone app_dir before moving into AppState (needed for background refresh).
             let ctx_dir = app_dir.clone();
             let snap_dir = app_dir.clone();
-            let health_db = db_arc.clone();
-            let health_app_dir = app_dir.clone();
-            let autoheal_db = db_arc.clone();
-            let autoheal_app_dir = app_dir.clone();
-            let health_registry = playbook_registry.clone();
-            let health_registry2 = playbook_registry.clone();
 
             // Manage shared state.
             app.manage(AppState {
@@ -382,257 +372,9 @@ pub fn run() {
                 }).await.ok();
             });
 
-            // Proactive health monitor + auto-heal + background scanners:
-            // disabled in the BYOK build to keep the surface clean.
-            // The Settings toggles for these were removed too. Re-enable
-            // by wrapping the scanner spawn in a feature flag when we surface
-            // these in the UI again.
-            let _ = (
-                llm_for_monitor,
-                db_arc,
-                llm_for_autoheal,
-                autoheal_db,
-                autoheal_app_dir,
-                scanner_mgr,
-                health_db,
-                health_app_dir,
-                health_registry,
-                health_registry2,
-            );
-
-            #[cfg(any())] // disabled — see comment above
-            tauri::async_runtime::spawn(async move {
-                // Initial delay — let app finish starting.
-                tokio::time::sleep(std::time::Duration::from_secs(300)).await;
-                eprintln!("[scanner] starting initial scan");
-                scanner_mgr.run_cycle(std::time::Duration::from_secs(30)).await;
-
-                // Run health scanners and auto-sync to fleet.
-                {
-                    let db_for_health = health_db.clone();
-                    let dir_for_health = health_app_dir.clone();
-                    let _ = tokio::task::spawn_blocking(move || {
-                        let conn = db_for_health.blocking_lock();
-                        let budget = std::time::Duration::from_secs(120);
-
-                        let enabled = {
-                            crate::dashboard_link::DashboardConfig::load(&dir_for_health)
-                                .and_then(|c| c.enabled_categories)
-                                .map(|cats| cats.iter().filter_map(|s| match s.as_str() {
-                                    "security" => Some(noah_health::Category::Security),
-                                    "updates" => Some(noah_health::Category::Updates),
-                                    "performance" => Some(noah_health::Category::Performance),
-                                    "backups" => Some(noah_health::Category::Backups),
-                                    "network" => Some(noah_health::Category::Network),
-                                    _ => None,
-                                }).collect::<Vec<_>>())
-                        };
-
-                        let should_scan = |cat: noah_health::Category| -> bool {
-                            match &enabled {
-                                None => true,
-                                Some(cats) => cats.contains(&cat),
-                            }
-                        };
-
-                        use crate::scanner::Scanner;
-                        if should_scan(noah_health::Category::Security) {
-                            let _ = crate::scanner::security::SecurityScanner.tick(budget, &conn);
-                        }
-                        if should_scan(noah_health::Category::Updates) {
-                            let _ = crate::scanner::updates::UpdateScanner.tick(budget, &conn);
-                        }
-                        if should_scan(noah_health::Category::Backups) {
-                            let _ = crate::scanner::backups::BackupScanner.tick(budget, &conn);
-                        }
-                        if should_scan(noah_health::Category::Performance) {
-                            let _ = crate::scanner::performance::PerformanceScanner.tick(budget, &conn);
-                        }
-                        if should_scan(noah_health::Category::Network) {
-                            let _ = crate::scanner::network::NetworkScanner.tick(budget, &conn);
-                        }
-
-                        // Compute and persist health score.
-                        let mut all_checks = Vec::new();
-                        let scan_types = [("security", noah_health::Category::Security), ("updates", noah_health::Category::Updates), ("backups", noah_health::Category::Backups), ("performance", noah_health::Category::Performance), ("network", noah_health::Category::Network)];
-                        for (scan_type, category) in &scan_types {
-                            if let Ok(results) = crate::safety::journal::query_scan_results(&conn, scan_type, None, None, None, 100) {
-                                for r in &results {
-                                    let status = match r.value_text.as_deref() {
-                                        Some("pass") => noah_health::CheckStatus::Pass,
-                                        Some("warn") => noah_health::CheckStatus::Warn,
-                                        _ => noah_health::CheckStatus::Fail,
-                                    };
-                                    all_checks.push(noah_health::CheckResult {
-                                        id: r.path.clone().unwrap_or_default(),
-                                        category: *category,
-                                        label: r.key.clone().unwrap_or_default(),
-                                        status,
-                                        detail: r.metadata.clone().unwrap_or_default(),
-                                    });
-                                }
-                            }
-                        }
-
-                        if !all_checks.is_empty() {
-                            let score = noah_health::compute_score(all_checks, None, enabled.as_deref());
-                            let record = journal::HealthScoreRecord {
-                                id: uuid::Uuid::new_v4().to_string(),
-                                score: score.overall_score as i32,
-                                grade: score.overall_grade.to_string(),
-                                categories: serde_json::to_string(&score.categories).unwrap_or_default(),
-                                computed_at: score.computed_at.clone(),
-                                device_id: score.device_id.clone(),
-                            };
-                            let _ = journal::insert_health_score(&conn, &record);
-
-                            // Return score + dir for async fleet sync.
-                            Some((score, dir_for_health))
-                        } else {
-                            None
-                        }
-                    }).await.ok().flatten().map(|(score, app_dir)| {
-                        // Auto-sync to fleet if linked.
-                        if let Some(config) = crate::dashboard_link::DashboardConfig::load(&app_dir) {
-                            let cats = serde_json::to_string(&score.categories).unwrap_or_else(|_| "[]".to_string());
-                            let s = score.overall_score as i32;
-                            let g = score.overall_grade.to_string();
-                            let sync_app_dir = app_dir.clone();
-                            let reg = health_registry.clone();
-                            tokio::spawn(async move {
-                                match crate::dashboard_link::push_checkin(&config, s, &g, &cats, Some(&sync_app_dir), Some(&reg)).await {
-                                    Ok(Some(new_cats)) => {
-                                        // Update enabled_categories from fleet policy.
-                                        if let Some(mut cfg) = crate::dashboard_link::DashboardConfig::load(&sync_app_dir) {
-                                            cfg.enabled_categories = Some(new_cats);
-                                            let _ = cfg.save(&sync_app_dir);
-                                        }
-                                    }
-                                    Ok(None) => {}
-                                    Err(e) => eprintln!("[health] auto fleet sync failed: {}", e),
-                                }
-                            });
-                        }
-                    });
-                }
-                eprintln!("[health] auto health check complete");
-
-                // Then run every 6 hours alongside proactive monitor.
-                loop {
-                    tokio::time::sleep(std::time::Duration::from_secs(6 * 60 * 60)).await;
-                    // Check for on-demand triggers first.
-                    scanner_mgr.run_triggered().await;
-                    // Regular cycle.
-                    scanner_mgr.run_cycle(std::time::Duration::from_secs(60)).await;
-
-                    // Run health scanners and auto-sync to fleet.
-                    {
-                        let db_for_health = health_db.clone();
-                        let dir_for_health = health_app_dir.clone();
-                        let _ = tokio::task::spawn_blocking(move || {
-                            let conn = db_for_health.blocking_lock();
-                            let budget = std::time::Duration::from_secs(120);
-
-                            let enabled = {
-                                crate::dashboard_link::DashboardConfig::load(&dir_for_health)
-                                    .and_then(|c| c.enabled_categories)
-                                    .map(|cats| cats.iter().filter_map(|s| match s.as_str() {
-                                        "security" => Some(noah_health::Category::Security),
-                                        "updates" => Some(noah_health::Category::Updates),
-                                        "performance" => Some(noah_health::Category::Performance),
-                                        "backups" => Some(noah_health::Category::Backups),
-                                        "network" => Some(noah_health::Category::Network),
-                                        _ => None,
-                                    }).collect::<Vec<_>>())
-                            };
-
-                            let should_scan = |cat: noah_health::Category| -> bool {
-                                match &enabled {
-                                    None => true,
-                                    Some(cats) => cats.contains(&cat),
-                                }
-                            };
-
-                            use crate::scanner::Scanner;
-                            if should_scan(noah_health::Category::Security) {
-                                let _ = crate::scanner::security::SecurityScanner.tick(budget, &conn);
-                            }
-                            if should_scan(noah_health::Category::Updates) {
-                                let _ = crate::scanner::updates::UpdateScanner.tick(budget, &conn);
-                            }
-                            if should_scan(noah_health::Category::Backups) {
-                                let _ = crate::scanner::backups::BackupScanner.tick(budget, &conn);
-                            }
-                            if should_scan(noah_health::Category::Performance) {
-                                let _ = crate::scanner::performance::PerformanceScanner.tick(budget, &conn);
-                            }
-                            if should_scan(noah_health::Category::Network) {
-                                let _ = crate::scanner::network::NetworkScanner.tick(budget, &conn);
-                            }
-
-                            // Compute and persist health score.
-                            let mut all_checks = Vec::new();
-                            let scan_types = [("security", noah_health::Category::Security), ("updates", noah_health::Category::Updates), ("backups", noah_health::Category::Backups), ("performance", noah_health::Category::Performance), ("network", noah_health::Category::Network)];
-                            for (scan_type, category) in &scan_types {
-                                if let Ok(results) = crate::safety::journal::query_scan_results(&conn, scan_type, None, None, None, 100) {
-                                    for r in &results {
-                                        let status = match r.value_text.as_deref() {
-                                            Some("pass") => noah_health::CheckStatus::Pass,
-                                            Some("warn") => noah_health::CheckStatus::Warn,
-                                            _ => noah_health::CheckStatus::Fail,
-                                        };
-                                        all_checks.push(noah_health::CheckResult {
-                                            id: r.path.clone().unwrap_or_default(),
-                                            category: *category,
-                                            label: r.key.clone().unwrap_or_default(),
-                                            status,
-                                            detail: r.metadata.clone().unwrap_or_default(),
-                                        });
-                                    }
-                                }
-                            }
-
-                            if !all_checks.is_empty() {
-                                let score = noah_health::compute_score(all_checks, None, enabled.as_deref());
-                                let record = journal::HealthScoreRecord {
-                                    id: uuid::Uuid::new_v4().to_string(),
-                                    score: score.overall_score as i32,
-                                    grade: score.overall_grade.to_string(),
-                                    categories: serde_json::to_string(&score.categories).unwrap_or_default(),
-                                    computed_at: score.computed_at.clone(),
-                                    device_id: score.device_id.clone(),
-                                };
-                                let _ = journal::insert_health_score(&conn, &record);
-
-                                Some((score, dir_for_health))
-                            } else {
-                                None
-                            }
-                        }).await.ok().flatten().map(|(score, app_dir)| {
-                            if let Some(config) = crate::dashboard_link::DashboardConfig::load(&app_dir) {
-                                let cats = serde_json::to_string(&score.categories).unwrap_or_else(|_| "[]".to_string());
-                                let s = score.overall_score as i32;
-                                let g = score.overall_grade.to_string();
-                                let sync_app_dir = app_dir.clone();
-                                let reg = health_registry2.clone();
-                                tokio::spawn(async move {
-                                    match crate::dashboard_link::push_checkin(&config, s, &g, &cats, Some(&sync_app_dir), Some(&reg)).await {
-                                        Ok(Some(new_cats)) => {
-                                            if let Some(mut cfg) = crate::dashboard_link::DashboardConfig::load(&sync_app_dir) {
-                                                cfg.enabled_categories = Some(new_cats);
-                                                let _ = cfg.save(&sync_app_dir);
-                                            }
-                                        }
-                                        Ok(None) => {}
-                                        Err(e) => eprintln!("[health] auto fleet sync failed: {}", e),
-                                    }
-                                });
-                            }
-                        });
-                    }
-                    eprintln!("[health] auto health check complete");
-                }
-            });
+            // Background scanner manager is built for its trigger/pause
+            // handles (stored in AppState) but is not spawned on a schedule.
+            let _ = scanner_mgr;
 
             Ok(())
         })
@@ -666,12 +408,6 @@ pub fn run() {
             commands::settings::set_telemetry_consent,
             commands::settings::track_event,
             commands::settings::get_feedback_context,
-            commands::settings::get_proactive_enabled,
-            commands::settings::set_proactive_enabled,
-            commands::settings::get_auto_heal_enabled,
-            commands::settings::set_auto_heal_enabled,
-            commands::settings::dismiss_proactive_suggestion,
-            commands::settings::act_on_proactive_suggestion,
             commands::settings::set_locale,
             commands::settings::set_session_mode,
             commands::settings::link_dashboard,
@@ -684,15 +420,6 @@ pub fn run() {
             commands::scanner::pause_scan,
             commands::scanner::resume_scan,
             commands::scanner::get_scan_jobs,
-            commands::health::get_health_score,
-            commands::health::run_health_check,
-            commands::health::get_health_history,
-            commands::health::export_health_report,
-            commands::health::open_health_fix,
-            commands::health::get_fleet_actions,
-            commands::health::resolve_fleet_action,
-            commands::health::start_fleet_playbook,
-            commands::health::verify_remediation,
             commands::settings::get_byok_telemetry_enabled,
             commands::settings::set_byok_telemetry_enabled,
             commands::settings::notify_issue_fixed,

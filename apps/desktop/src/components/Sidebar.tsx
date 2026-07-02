@@ -456,9 +456,6 @@ export function Sidebar({ session }: SidebarProps) {
           )}
         </div>
 
-        {/* Scorecards / Health: removed for v1 — clean app, no extras.
-            Code paths preserved server-side; re-introduce when ready. */}
-
         {/* Knowledge */}
         <button
           onClick={() => setActiveView(activeView === "knowledge" ? "chat" : "knowledge")}
@@ -476,8 +473,6 @@ export function Sidebar({ session }: SidebarProps) {
           </span>
           {t("sidebar.knowledge")}
         </button>
-
-        {/* Actions — now merged into Health panel */}
       </div>
 
       {/* Divider */}

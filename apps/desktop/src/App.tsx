@@ -10,8 +10,6 @@ import { Sidebar } from "./components/Sidebar";
 import { KnowledgeView } from "./components/KnowledgePanel";
 import { DebugPanel } from "./components/DebugPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
-import { HealthDashboard } from "./components/HealthDashboard";
-import { ProactiveSuggestionBanner } from "./components/ProactiveSuggestionBanner";
 import { SessionSummary } from "./components/SessionSummary";
 import { useSessionStore } from "./stores/sessionStore";
 import { TilePickerScreen } from "./components/TilePickerScreen";
@@ -124,7 +122,6 @@ function MainApp() {
   return (
     <div className="flex flex-col h-screen bg-bg-primary text-text-primary">
       <MainTitleBar />
-      <ProactiveSuggestionBanner />
 
       {/* Body: sidebar + main content */}
       <div className="flex flex-1 min-h-0 relative">
@@ -133,9 +130,7 @@ function MainApp() {
         {/* Only the main content area zooms — title bar & sidebar stay fixed */}
         <div className="flex flex-col flex-1 min-w-0 origin-top-left" style={{ zoom }}>
           <SessionSummary />
-          {activeView === "health" || activeView === "diagnostics" ? (
-            <HealthDashboard />
-          ) : activeView === "knowledge" ? (
+          {activeView === "knowledge" ? (
             <KnowledgeView onNewKnowledge={async () => {
               useSessionStore.getState().setActiveView("chat");
               await session.startNewProblem("learn");

@@ -327,34 +327,6 @@ export async function getFeedbackContext(): Promise<FeedbackContext> {
   return await invoke<FeedbackContext>("get_feedback_context");
 }
 
-// ── Proactive Suggestions ──
-
-export async function getProactiveEnabled(): Promise<boolean> {
-  return await invoke<boolean>("get_proactive_enabled");
-}
-
-export async function setProactiveEnabled(enabled: boolean): Promise<void> {
-  await invoke<void>("set_proactive_enabled", { enabled });
-}
-
-export async function dismissProactiveSuggestion(id: string): Promise<void> {
-  await invoke<void>("dismiss_proactive_suggestion", { id });
-}
-
-export async function actOnProactiveSuggestion(id: string): Promise<void> {
-  await invoke<void>("act_on_proactive_suggestion", { id });
-}
-
-// ── Auto-Heal ──
-
-export async function getAutoHealEnabled(): Promise<boolean> {
-  return await invoke<boolean>("get_auto_heal_enabled");
-}
-
-export async function setAutoHealEnabled(enabled: boolean): Promise<void> {
-  await invoke<void>("set_auto_heal_enabled", { enabled });
-}
-
 // ── Scanner / Diagnostics ──
 
 export interface ScanJobRecord {
@@ -386,63 +358,6 @@ export async function resumeScan(scanType: string): Promise<void> {
   await invoke<void>("resume_scan", { scanType });
 }
 
-// ── Health Score ──
-
-export interface CheckResult {
-  id: string;
-  category: string;
-  label: string;
-  status: "pass" | "warn" | "fail";
-  detail: string;
-}
-
-export interface CategoryScore {
-  category: string;
-  score: number;
-  grade: string;
-  checks: CheckResult[];
-}
-
-export interface HealthScore {
-  overall_score: number;
-  overall_grade: string;
-  categories: CategoryScore[];
-  computed_at: string;
-  device_id: string | null;
-}
-
-export interface HealthScoreRecord {
-  id: string;
-  score: number;
-  grade: string;
-  categories: string; // JSON
-  computed_at: string;
-  device_id: string | null;
-}
-
-export async function getHealthScore(): Promise<HealthScore | null> {
-  const json = await invoke<string>("get_health_score");
-  return JSON.parse(json);
-}
-
-export async function runHealthCheck(): Promise<HealthScore> {
-  const json = await invoke<string>("run_health_check");
-  return JSON.parse(json);
-}
-
-export async function openHealthFix(checkId: string): Promise<void> {
-  await invoke<void>("open_health_fix", { checkId });
-}
-
-export async function getHealthHistory(limit?: number): Promise<HealthScoreRecord[]> {
-  const json = await invoke<string>("get_health_history", { limit });
-  return JSON.parse(json);
-}
-
-export async function exportHealthReport(): Promise<string> {
-  return await invoke<string>("export_health_report");
-}
-
 // ── Dashboard Link ──
 
 export interface DashboardStatus {
@@ -464,37 +379,6 @@ export async function unlinkDashboard(): Promise<void> {
 export async function getDashboardStatus(): Promise<DashboardStatus> {
   const json = await invoke<string>("get_dashboard_status");
   return JSON.parse(json);
-}
-
-// ── Fleet Actions ──
-
-export interface FleetAction {
-  id: string;
-  check_id: string;
-  check_label: string;
-  action_hint: string;
-  created_at: string;
-  action_type: "hint" | "playbook";
-  playbook_slug?: string;
-  playbook_content?: string;
-  issue_id?: string;
-}
-
-export async function getFleetActions(): Promise<FleetAction[]> {
-  const json = await invoke<string>("get_fleet_actions");
-  return JSON.parse(json);
-}
-
-export async function resolveFleetAction(actionId: string, status: "completed" | "dismissed"): Promise<void> {
-  await invoke<void>("resolve_fleet_action", { actionId, status });
-}
-
-export async function startFleetPlaybook(actionId: string, playbookSlug: string): Promise<string> {
-  return await invoke<string>("start_fleet_playbook", { actionId, playbookSlug });
-}
-
-export async function verifyRemediation(actionId: string): Promise<string> {
-  return await invoke<string>("verify_remediation", { actionId });
 }
 
 // ── V2 Agent Commands ──
