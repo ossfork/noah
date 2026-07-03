@@ -224,10 +224,8 @@ async function generateLatestJson(version, tag, artifacts) {
   const signature = (await readFile(sigFile, "utf8")).trim();
   const url = updaterDownloadUrl(tag, updaterFile);
 
-  // Download existing channel metadata from the GitHub release to merge
-  // platforms from serialized matrix builds. Do not use the asset name
-  // "latest.json" here: legacy installs may still poll that legacy
-  // xuy/noah release URL.
+  // Merge platforms from any existing release manifest so serialized matrix
+  // builds (macOS, then Windows/Linux) accumulate into one channel manifest.
   const latestPath = path.join(ROOT, LATEST_JSON_ASSET);
   let existing = { version, pub_date: new Date().toISOString(), platforms: {} };
   try {
@@ -434,19 +432,10 @@ async function main() {
   }
 
   if (!releaseExists) {
-    const createArgs = [
+    await runCommand("gh", [
       "release", "create", tag, "--repo", RELEASE_REPO,
-      "--title", `Noah ${tag}`, "--generate-notes",
-    ];
-    // BYOK (any non-"desktop" channel) releases on noahapp/noah-for-tinkerers must NEVER become
-    // the repo's "Latest" release. Legacy 1.1.0 installs resolve updates via
-    //   github.com/xuy/noah/releases/latest/download/latest.json
-    // and that pointer must keep resolving to the one-hop migration release
-    // (which carries latest.json). A BYOK release tagged higher would steal
-    // "Latest", 404 the legacy channel, and strand un-migrated users. Marking
-    // BYOK releases as prereleases keeps them off the "Latest" pointer.
-    if (UPDATE_CHANNEL !== "desktop") createArgs.push("--prerelease");
-    await runCommand("gh", createArgs);
+      "--title", `Noah for Tinkerers ${tag}`, "--generate-notes", "--latest",
+    ]);
   }
 
   const toUpload = [...artifacts];
@@ -483,9 +472,10 @@ async function main() {
     "release", "view", tag, "--repo", RELEASE_REPO, "--json", "url", "-q", ".url",
   ]);
 
-  // Mirror versioned artifacts and channel metadata to Cloudflare R2 so
-  // https://onnoah.app/byok/latest.json can serve public BYOK updates
-  // without touching the legacy GitHub latest.json channel.
+  // Mirror versioned artifacts + the channel manifest to Cloudflare R2 so
+  // onnoah.app/${UPDATE_CHANNEL}/latest.json can serve in-app auto-updates.
+  // Optional: each upload is skipped gracefully if wrangler/CLOUDFLARE creds
+  // aren't configured (the GitHub Release downloads work regardless).
   for (const artifact of artifacts) {
     const key = `${UPDATE_CHANNEL}/${tag}/${path.basename(artifact)}`;
     try {
